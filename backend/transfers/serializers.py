@@ -37,3 +37,43 @@ class TransferSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = fields
+
+
+class ProviderWebhookDataSerializer(serializers.Serializer):
+    provider_transfer_id = serializers.CharField(
+        max_length=255,
+        trim_whitespace=True,
+    )
+    reason = serializers.CharField(
+        required=False,
+        allow_blank=False,
+        max_length=255,
+        trim_whitespace=True,
+    )
+
+
+class ProviderWebhookSerializer(serializers.Serializer):
+    class Event:
+        COMPLETED = "transfer.completed"
+        FAILED = "transfer.failed"
+
+        CHOICES = (COMPLETED, FAILED)
+
+    event_id = serializers.CharField(
+        max_length=255,
+        trim_whitespace=True,
+    )
+    event = serializers.ChoiceField(choices=Event.CHOICES)
+    occurred_at = serializers.DateTimeField()
+    data = ProviderWebhookDataSerializer()
+
+    def validate(self, attrs):
+        if (
+            attrs["event"] == self.Event.COMPLETED
+            and "reason" in attrs["data"]
+        ):
+            raise serializers.ValidationError(
+                {"data": {"reason": "Reason is only valid for failed transfers."}}
+            )
+
+        return attrs

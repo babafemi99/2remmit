@@ -6,3 +6,7 @@ class IdempotencyConflict(Exception):
 
 class IdempotencyInProgress(Exception):
     pass
+
+
+class WebhookEventConflict(Exception):
+    pass

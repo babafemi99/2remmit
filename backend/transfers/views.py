@@ -7,16 +7,26 @@ from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from transfers.exceptions import InvalidTransition, IdempotencyConflict, IdempotencyInProgress
+from transfers.exceptions import (
+    IdempotencyConflict,
+    IdempotencyInProgress,
+    InvalidTransition,
+    WebhookEventConflict,
+)
 from transfers.idempotency import create_transfer_idempotently
 from transfers.models import Transfer
-from transfers.serializers import TransferCreateSerializer, TransferSerializer
+from transfers.serializers import (
+    ProviderWebhookSerializer,
+    TransferCreateSerializer,
+    TransferSerializer,
+)
 from transfers.services import (
     cancel_transfer,
     create_transfer,
     submit_transfer,
 )
 from transfers.webhook_security import verify_webhook_signature
+from transfers.webhooks import process_provider_webhook
 
 
 logger = logging.getLogger(__name__)
@@ -130,7 +140,41 @@ class ProviderWebhookView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
+        serializer = ProviderWebhookSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            result = process_provider_webhook(**serializer.validated_data)
+        except WebhookEventConflict as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        if result.duplicate:
+            return Response(
+                {
+                    "detail": "Webhook event already received",
+                    "duplicate": True,
+                }
+            )
+
+        if (
+            result.event.processing_outcome
+            == result.event.ProcessingOutcome.UNKNOWN_TRANSFER
+        ):
+            return Response(
+                {"detail": "Webhook received but transfer was not found"}
+            )
+
+        if (
+            result.event.processing_outcome
+            == result.event.ProcessingOutcome.INVALID_TRANSITION
+        ):
+            return Response(
+                {"detail": "Webhook received but no transition was applied"}
+            )
+
         return Response(
-            {"detail": "Webhook handling not implemented yet."},
-            status=status.HTTP_501_NOT_IMPLEMENTED,
+            {"detail": "Webhook processed"},
         )
