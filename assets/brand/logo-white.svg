@@ -1,12 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="640" height="180" viewBox="0 0 640 180" role="img" aria-labelledby="title description">
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="180" viewBox="0 0 520 180" role="img" aria-labelledby="title description">
   <title id="title">2Remit</title>
   <desc id="description">The reversed white 2Remit logo for dark backgrounds.</desc>
 
-  <g transform="translate(24 18)" fill="#FFFFFF">
+  <g transform="translate(35 31) scale(.72)" fill="#FFFFFF">
     <path d="M28 47C28 24 46 8 71 8h40c27 0 45 17 45 42 0 19-10 31-29 43l-48 29h77v22H28v-19c0-13 6-22 19-30l62-38c8-5 12-10 12-17 0-8-6-13-17-13H72c-10 0-17 7-17 20H28Z"/>
     <path d="M32 91 87 57v-15l38 26-38 27V79L32 113V91Z"/>
     <path d="m151 111-48 29v15l-38-26 38-27v16l48-29v22Z"/>
   </g>
 
-  <text x="218" y="115" fill="#FFFFFF" font-family="Manrope, Avenir Next, Arial, sans-serif" font-size="74" font-weight="750" letter-spacing="-3.4">2Remit</text>
+  <text x="180" y="120" fill="#FFFFFF" font-family="Manrope, Avenir Next, Arial, sans-serif" font-size="80" font-weight="700" letter-spacing="-3">2Remit</text>
 </svg>

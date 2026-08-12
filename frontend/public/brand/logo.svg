@@ -7,14 +7,10 @@
       <stop offset="1" stop-color="#6D4AFF"/>
     </linearGradient>
   </defs>
-
-  <!-- 2R transfer mark -->
   <g transform="translate(35 31) scale(.72)">
     <path d="M28 47C28 24 46 8 71 8h40c27 0 45 17 45 42 0 19-10 31-29 43l-48 29h77v22H28v-19c0-13 6-22 19-30l62-38c8-5 12-10 12-17 0-8-6-13-17-13H72c-10 0-17 7-17 20H28Z" fill="#2563EB"/>
     <path d="M32 91 87 57v-15l38 26-38 27V79L32 113V91Z" fill="#6D4AFF"/>
     <path d="M79 122 127 93l24-4-48 29v22l48-29v-22 22l-48 29v15l-38-26 38-27v16l48-29v22l-48 29Z" fill="#102A43"/>
   </g>
-
-  <!-- Wordmark. Manrope is loaded by the product; fallbacks preserve layout. -->
   <text x="180" y="120" fill="#102A43" font-family="Manrope, Avenir Next, Arial, sans-serif" font-size="80" font-weight="700" letter-spacing="-3">2Remit</text>
 </svg>

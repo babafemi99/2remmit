@@ -1,6 +1,6 @@
 import { TransfersConsole } from "@/components/transfers/transfers-console";
 
-type HomeProps = {
+type TransfersPageProps = {
   searchParams: Promise<{
     query?: string;
     status?: string;
@@ -8,9 +8,10 @@ type HomeProps = {
   }>;
 };
 
-export default async function Home({ searchParams }: HomeProps) {
+export default async function TransfersPage({
+  searchParams,
+}: TransfersPageProps) {
   const params = await searchParams;
-
   return (
     <TransfersConsole
       initialQuery={params.query ?? ""}
