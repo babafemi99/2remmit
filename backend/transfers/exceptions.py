@@ -3,3 +3,6 @@ class InvalidTransition(Exception):
 
 class IdempotencyConflict(Exception):
     pass
+
+class IdempotencyInProgress(Exception):
+    pass

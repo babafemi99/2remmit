@@ -3,7 +3,8 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from transfers.exceptions import InvalidTransition
+from transfers.exceptions import InvalidTransition, IdempotencyConflict, IdempotencyInProgress
+from transfers.idempotency import create_transfer_idempotently
 from transfers.models import Transfer
 from transfers.serializers import TransferCreateSerializer, TransferSerializer
 from transfers.services import (
@@ -16,22 +17,44 @@ from transfers.services import (
 class TransferListCreateView(APIView):
     # noinspection PyMethodMayBeStatic
     def get(self, _request):
-        transfers = Transfer.objects.order_by("-created_at")
+        transfers = Transfer.objects.all()
         output = TransferSerializer(transfers, many=True)
 
         return Response(output.data)
 
-    # noinspection PyMethodMayBeStatic
     def post(self, request):
         serializer = TransferCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        transfer = create_transfer(**serializer.validated_data)
-        output = TransferSerializer(transfer)
+        idempotency_key = request.headers.get("Idempotency-Key")
+
+        if not idempotency_key:
+            return Response(
+                {"detail": "Idempotency-Key header is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            body, response_code = create_transfer_idempotently(
+                idempotency_key=idempotency_key,
+                **serializer.validated_data,
+            )
+
+        except IdempotencyConflict as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        except IdempotencyInProgress as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_409_CONFLICT,
+            )
 
         return Response(
-            output.data,
-            status=status.HTTP_201_CREATED,
+            body,
+            status=response_code,
         )
 
 

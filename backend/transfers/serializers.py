@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from rest_framework import serializers
 
 from transfers.models import Transfer
@@ -7,7 +9,7 @@ class TransferCreateSerializer(serializers.Serializer):
     amount = serializers.DecimalField(
         max_digits=18,
         decimal_places=2,
-        min_value=0.01,
+        min_value=Decimal("0.01"),
     )
 
     currency = serializers.ChoiceField(

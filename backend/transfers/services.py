@@ -4,8 +4,7 @@ from uuid import UUID, uuid4
 from django.db import transaction
 
 from transfers.exceptions import InvalidTransition
-from transfers.idempotency import hash_transfer_request
-from transfers.models import Transfer, IdempotencyRecord
+from transfers.models import Transfer
 
 
 def generate_provider_transfer_id() -> str:
