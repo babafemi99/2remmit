@@ -1,0 +1,16 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.sqlite3
+
+# Environment
+.env
+
+# IDE / OS
+.idea/
+.DS_Store
+
+# Next.js
+node_modules/
+.next/
