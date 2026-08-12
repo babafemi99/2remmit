@@ -93,6 +93,14 @@ class TransferSubmitView(APIView):
         except Transfer.DoesNotExist as exc:
             raise NotFound("Transfer not found") from exc
         except InvalidTransition as exc:
+            logger.warning(
+                "Transfer submission rejected by lifecycle rules",
+                extra={
+                    "event": "transfer.invalid_transition",
+                    "transfer_id": str(transfer_id),
+                    "operation": "submit",
+                },
+            )
             return Response(
                 {"detail": str(exc)},
                 status=status.HTTP_409_CONFLICT,
@@ -109,6 +117,14 @@ class TransferCancelView(APIView):
         except Transfer.DoesNotExist as exc:
             raise NotFound("Transfer not found") from exc
         except InvalidTransition as exc:
+            logger.warning(
+                "Transfer cancellation rejected by lifecycle rules",
+                extra={
+                    "event": "transfer.invalid_transition",
+                    "transfer_id": str(transfer_id),
+                    "operation": "cancel",
+                },
+            )
             return Response(
                 {"detail": str(exc)},
                 status=status.HTTP_409_CONFLICT,
@@ -131,6 +147,7 @@ class ProviderWebhookView(APIView):
             logger.warning(
                 "Rejected provider webhook with invalid signature",
                 extra={
+                    "event": "webhook.invalid_signature",
                     "request_path": request.path,
                     "signature_present": bool(signature),
                 },

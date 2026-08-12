@@ -75,7 +75,11 @@ def process_provider_webhook(
         ):
             logger.warning(
                 "Provider webhook event ID reused with different event data",
-                extra={"event_id": event_id},
+                extra={
+                    "event": "webhook.conflict",
+                    "event_id": event_id,
+                    "provider_event": event,
+                },
             )
             raise WebhookEventConflict(
                 "Event ID was already used with different event data"
@@ -83,7 +87,12 @@ def process_provider_webhook(
 
         logger.info(
             "Duplicate provider webhook delivery",
-            extra={"event_id": event_id},
+            extra={
+                "event": "webhook.duplicate",
+                "event_id": event_id,
+                "provider_event": event,
+                "processing_outcome": webhook_event.processing_outcome,
+            },
         )
         return WebhookProcessingResult(event=webhook_event, duplicate=True)
 
@@ -108,7 +117,13 @@ def process_provider_webhook(
         )
         logger.warning(
             "Provider webhook references an unknown transfer",
-            extra={"event_id": event_id},
+            extra={
+                "event": "webhook.unknown_transfer",
+                "event_id": event_id,
+                "provider_event": event,
+                "provider_transfer_id": provider_transfer_id,
+                "processing_outcome": webhook_event.processing_outcome,
+            },
         )
         return WebhookProcessingResult(event=webhook_event)
 
@@ -120,6 +135,7 @@ def process_provider_webhook(
         else:
             fail_transfer(transfer.pk)
     except InvalidTransition as exc:
+        transfer.refresh_from_db(fields=["status"])
         webhook_event.processing_outcome = (
             WebhookEvent.ProcessingOutcome.INVALID_TRANSITION
         )
@@ -127,19 +143,18 @@ def process_provider_webhook(
         logger.warning(
             "Provider webhook requested an invalid transfer transition",
             extra={
+                "event": "webhook.invalid_transition",
                 "event_id": event_id,
-                "transfer_reference": transfer.reference,
+                "provider_event": event,
+                "transfer_id": str(transfer.pk),
+                "transfer_ref": transfer.reference,
+                "previous_status": transfer.status,
+                "requested_status": provider_status,
+                "processing_outcome": webhook_event.processing_outcome,
             },
         )
     else:
         webhook_event.processing_outcome = WebhookEvent.ProcessingOutcome.PROCESSED
-        logger.info(
-            "Provider webhook transition processed",
-            extra={
-                "event_id": event_id,
-                "transfer_reference": transfer.reference,
-            },
-        )
 
     webhook_event.processed_at = timezone.now()
     webhook_event.save(
@@ -150,5 +165,22 @@ def process_provider_webhook(
             "processed_at",
         ]
     )
+
+    if webhook_event.processing_outcome == WebhookEvent.ProcessingOutcome.PROCESSED:
+        log_context = {
+            "event": "webhook.processed",
+            "event_id": event_id,
+            "provider_event": event,
+            "provider_transfer_id": provider_transfer_id,
+            "transfer_id": str(transfer.pk),
+            "transfer_ref": transfer.reference,
+            "processing_outcome": webhook_event.processing_outcome,
+        }
+        transaction.on_commit(
+            lambda: logger.info(
+                "Provider webhook transition processed",
+                extra=log_context,
+            )
+        )
 
     return WebhookProcessingResult(event=webhook_event)

@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -29,6 +31,82 @@ DEBUG = True
 ALLOWED_HOSTS = []
 
 PROVIDER_WEBHOOK_SECRET = os.environ.get("PROVIDER_WEBHOOK_SECRET", "")
+
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
+LOG_DESTINATION = os.environ.get("LOG_DESTINATION", "console").lower()
+LOG_FILE_PATH = os.environ.get("LOG_FILE_PATH", "logs/2remit.log")
+
+VALID_LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+VALID_LOG_DESTINATIONS = {"console", "file"}
+
+if LOG_LEVEL not in VALID_LOG_LEVELS:
+    raise ImproperlyConfigured(f"Unsupported LOG_LEVEL: {LOG_LEVEL}")
+
+if LOG_DESTINATION not in VALID_LOG_DESTINATIONS:
+    raise ImproperlyConfigured(
+        f"Unsupported LOG_DESTINATION: {LOG_DESTINATION}"
+    )
+
+LOG_HANDLERS = {
+    "console": {
+        "class": "logging.StreamHandler",
+        "formatter": "json",
+        "stream": "ext://sys.stderr",
+    },
+}
+ACTIVE_LOG_HANDLERS = ["console"]
+
+if LOG_DESTINATION == "file":
+    resolved_log_path = Path(LOG_FILE_PATH)
+
+    if not resolved_log_path.is_absolute():
+        resolved_log_path = BASE_DIR / resolved_log_path
+
+    resolved_log_path.parent.mkdir(parents=True, exist_ok=True)
+    LOG_HANDLERS["file"] = {
+        "class": "logging.FileHandler",
+        "formatter": "json",
+        "filename": str(resolved_log_path),
+        "encoding": "utf-8",
+    }
+    ACTIVE_LOG_HANDLERS = ["file"]
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "json": {
+            "()": "pythonjsonlogger.json.JsonFormatter",
+            "format": (
+                "%(asctime)s %(levelname)s %(name)s "
+                "%(event)s %(message)s"
+            ),
+            "datefmt": "%Y-%m-%dT%H:%M:%S%z",
+            "rename_fields": {
+                "asctime": "timestamp",
+                "levelname": "level",
+                "name": "logger",
+            },
+        },
+    },
+    "handlers": LOG_HANDLERS,
+    "root": {
+        "handlers": ACTIVE_LOG_HANDLERS,
+        "level": LOG_LEVEL,
+    },
+    "loggers": {
+        "django": {
+            "handlers": ACTIVE_LOG_HANDLERS,
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "transfers": {
+            "handlers": ACTIVE_LOG_HANDLERS,
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+    },
+}
 
 
 # Application definition

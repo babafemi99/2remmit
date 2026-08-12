@@ -1,5 +1,6 @@
 import hashlib
 import json
+import logging
 from decimal import Decimal
 
 from django.db import IntegrityError, transaction
@@ -8,6 +9,9 @@ from transfers.exceptions import IdempotencyConflict, IdempotencyInProgress
 from transfers.models import IdempotencyRecord
 from transfers.serializers import TransferSerializer
 from transfers.services import create_transfer
+
+
+logger = logging.getLogger(__name__)
 
 
 def canonical_transfer_payload(*,amount: Decimal,currency: str,recipient_ref: str) -> dict[str, str]:
@@ -73,13 +77,41 @@ def create_transfer_idempotently(
 
     if not created:
         if record.request_hash != request_hash:
+            logger.warning(
+                "Idempotency key reused with different request data",
+                extra={
+                    "event": "idempotency.conflict",
+                    "request_path": record.request_path,
+                    "action": record.action,
+                    "idempotency_key_present": True,
+                },
+            )
             raise IdempotencyConflict(
                 "Idempotency key was already used with a different request"
             )
 
         if record.status == IdempotencyRecord.Status.COMPLETED:
+            logger.info(
+                "Replaying completed idempotent operation",
+                extra={
+                    "event": "idempotency.replay",
+                    "request_path": record.request_path,
+                    "action": record.action,
+                    "transfer_id": str(record.transfer_id),
+                    "idempotency_key_present": True,
+                },
+            )
             return record.response_body, record.response_code
 
+        logger.info(
+            "Idempotent operation is already processing",
+            extra={
+                "event": "idempotency.in_progress",
+                "request_path": record.request_path,
+                "action": record.action,
+                "idempotency_key_present": True,
+            },
+        )
         raise IdempotencyInProgress(
             "A request with this idempotency key is already being processed"
         )
