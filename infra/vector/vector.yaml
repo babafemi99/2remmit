@@ -1,0 +1,35 @@
+data_dir: /vector-data-dir
+
+sources:
+  docker:
+    type: docker_logs
+    include_containers:
+      - 2remit-backend
+      - 2remit-frontend
+
+transforms:
+  normalize:
+    type: remap
+    inputs: [docker]
+    source: |
+      .service = if contains(string!(.container_name), "backend") { "backend" } else { "frontend" }
+      parsed, err = parse_json(.message)
+      if err == null && is_object(parsed) {
+        . = merge(., object!(parsed))
+      }
+      del(.label)
+      del(.source_type)
+
+sinks:
+  victoria_logs:
+    type: http
+    inputs: [normalize]
+    uri: http://victoria-logs:9428/insert/jsonline?_stream_fields=service,container_name&_msg_field=message&_time_field=timestamp
+    method: post
+    compression: gzip
+    encoding:
+      codec: json
+    framing:
+      method: newline_delimited
+    healthcheck:
+      enabled: false

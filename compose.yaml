@@ -1,0 +1,129 @@
+name: 2remit
+
+x-backend-environment: &backend-environment
+  DJANGO_DEBUG: "true"
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-local-compose-only-not-for-production}
+  DJANGO_ALLOWED_HOSTS: backend,localhost,127.0.0.1
+  POSTGRES_DB: ${POSTGRES_DB:-2remit}
+  POSTGRES_USER: ${POSTGRES_USER:-2remit}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-2remit-local-password}
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: "5432"
+  DB_CONN_MAX_AGE: "60"
+  LOG_DESTINATION: console
+  ENABLE_PROVIDER_SIMULATOR: "true"
+  PROVIDER_WEBHOOK_SECRET: ${PROVIDER_WEBHOOK_SECRET:-2remit-local-provider-secret}
+  PROVIDER_SIMULATOR_WEBHOOK_URL: http://backend:8000/api/webhooks/provider/
+  PROVIDER_SIMULATOR_ALLOWED_HOSTS: backend
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: 2remit-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-2remit}
+      POSTGRES_USER: ${POSTGRES_USER:-2remit}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-2remit-local-password}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    stop_grace_period: 20s
+    restart: unless-stopped
+
+  setup:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment: *backend-environment
+    command: ["sh", "-c", "python manage.py migrate --noinput && python manage.py seed_demo"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: 2remit-backend
+    environment: *backend-environment
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/transfers/', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    stop_grace_period: 20s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: 2remit-frontend
+    environment:
+      DJANGO_API_BASE_URL: http://backend:8000
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/transfers').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    stop_grace_period: 20s
+    restart: unless-stopped
+
+  victoria-logs:
+    image: victoriametrics/victoria-logs:v1.52.0
+    container_name: 2remit-victoria-logs
+    command:
+      - -storageDataPath=/victoria-logs-data
+      - -retentionPeriod=7d
+    ports:
+      - "${VICTORIA_LOGS_PORT:-9428}:9428"
+    volumes:
+      - victoria-logs-data:/victoria-logs-data
+    healthcheck:
+      test: ["CMD", "/victoria-logs-prod", "-version"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    stop_grace_period: 20s
+    restart: unless-stopped
+
+  vector:
+    image: timberio/vector:0.48.0-alpine
+    container_name: 2remit-vector
+    command: ["--config", "/etc/vector/vector.yaml"]
+    volumes:
+      - ./infra/vector/vector.yaml:/etc/vector/vector.yaml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - vector-data:/vector-data-dir
+    depends_on:
+      victoria-logs:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "vector", "validate", "--no-environment", "/etc/vector/vector.yaml"]
+      interval: 15s
+      timeout: 10s
+      retries: 6
+    stop_grace_period: 20s
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  victoria-logs-data:
+  vector-data:

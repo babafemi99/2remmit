@@ -4,7 +4,7 @@ PYTHON := .venv/bin/python
 DJANGO_HOST := 127.0.0.1:8000
 PROVIDER_WEBHOOK_SECRET ?= 2remit-local-provider-secret
 
-.PHONY: dev backend frontend
+.PHONY: dev backend frontend compose-up compose-down compose-logs seed test
 
 dev:
 	@set -eu; \
@@ -33,3 +33,19 @@ backend:
 
 frontend:
 	@cd frontend && npm run dev
+
+compose-up:
+	docker compose up --build -d
+
+compose-down:
+	docker compose down
+
+compose-logs:
+	docker compose logs --follow backend frontend vector victoria-logs
+
+seed:
+	docker compose run --rm setup python manage.py seed_demo
+
+test:
+	@cd backend && ../$(PYTHON) manage.py test
+	@cd frontend && npm run format:check && npm run lint && npm run type-check && npm test && npm run build
