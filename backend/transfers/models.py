@@ -145,3 +145,64 @@ class IdempotencyRecord(models.Model):
     updated_at = models.DateTimeField(
         auto_now=True,
     )
+
+
+class WebhookEvent(models.Model):
+    class ProviderStatus(models.TextChoices):
+        COMPLETED = "completed"
+        FAILED = "failed"
+
+    class ProcessingOutcome(models.TextChoices):
+        PROCESSED = "processed"
+        UNKNOWN_TRANSFER = "unknown_transfer"
+        INVALID_TRANSITION = "invalid_transition"
+        FAILED = "failed"
+
+    event_id = models.CharField(
+        max_length=255,
+        unique=True,
+    )
+
+    provider_transfer_id = models.CharField(
+        max_length=255,
+        db_index=True,
+    )
+
+    provider_status = models.CharField(
+        max_length=10,
+        choices=ProviderStatus,
+    )
+
+    occurred_at = models.DateTimeField()
+
+    received_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    processed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    processing_outcome = models.CharField(
+        max_length=20,
+        choices=ProcessingOutcome,
+        null=True,
+        blank=True,
+    )
+
+    error_message = models.TextField(
+        null=True,
+        blank=True,
+    )
+
+    transfer = models.ForeignKey(
+        Transfer,
+        on_delete=models.SET_NULL,
+        related_name="webhook_events",
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        ordering = ["-received_at"]

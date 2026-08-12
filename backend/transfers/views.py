@@ -1,3 +1,6 @@
+import logging
+
+from django.conf import settings
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.exceptions import NotFound
@@ -13,6 +16,10 @@ from transfers.services import (
     create_transfer,
     submit_transfer,
 )
+from transfers.webhook_security import verify_webhook_signature
+
+
+logger = logging.getLogger(__name__)
 
 
 class TransferListCreateView(APIView):
@@ -102,7 +109,27 @@ class TransferCancelView(APIView):
 
 class ProviderWebhookView(APIView):
     # noinspection PyMethodMayBeStatic
-    def post(self, _request):
+    def post(self, request):
+        signature = request.headers.get("X-Provider-Signature", "")
+        secret = settings.PROVIDER_WEBHOOK_SECRET
+
+        if not secret or not verify_webhook_signature(
+            payload=request.body,
+            signature=signature,
+            secret=secret,
+        ):
+            logger.warning(
+                "Rejected provider webhook with invalid signature",
+                extra={
+                    "request_path": request.path,
+                    "signature_present": bool(signature),
+                },
+            )
+            return Response(
+                {"detail": "Invalid webhook signature"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
         return Response(
             {"detail": "Webhook handling not implemented yet."},
             status=status.HTTP_501_NOT_IMPLEMENTED,

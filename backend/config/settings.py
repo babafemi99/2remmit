@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -26,6 +27,8 @@ SECRET_KEY = 'django-insecure-lwy$%!md__me1&kw500(e8xc0pad5(fi8ge9b!x(lzf_j1vqv!
 DEBUG = True
 
 ALLOWED_HOSTS = []
+
+PROVIDER_WEBHOOK_SECRET = os.environ.get("PROVIDER_WEBHOOK_SECRET", "")
 
 
 # Application definition
