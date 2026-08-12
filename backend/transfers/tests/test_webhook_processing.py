@@ -7,7 +7,7 @@ from django.db import close_old_connections
 from django.test import TestCase, TransactionTestCase
 
 from transfers.exceptions import WebhookEventConflict
-from transfers.models import Transfer, WebhookEvent
+from transfers.models import Transfer, TransferActivity, WebhookEvent
 from transfers.webhooks import process_provider_webhook
 
 
@@ -126,6 +126,7 @@ class WebhookProcessingTests(TestCase):
             ("transfer.completed", "transfer.failed")
         ):
             with self.subTest(provider_event=provider_event):
+                TransferActivity.objects.all().delete()
                 Transfer.objects.all().delete()
                 transfer = self.create_transfer(status=Transfer.Status.PENDING)
 
@@ -150,6 +151,7 @@ class WebhookProcessingTests(TestCase):
 
         for index, (first_event, second_event, terminal_status) in enumerate(scenarios):
             with self.subTest(first_event=first_event, second_event=second_event):
+                TransferActivity.objects.all().delete()
                 Transfer.objects.all().delete()
                 transfer = self.create_transfer()
                 self.process(event_id=f"evt_first_{index}", event=first_event)

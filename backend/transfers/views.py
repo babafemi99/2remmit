@@ -14,10 +14,11 @@ from transfers.exceptions import (
     WebhookEventConflict,
 )
 from transfers.idempotency import create_transfer_idempotently
-from transfers.models import Transfer
+from transfers.models import Transfer, TransferActivity
 from transfers.serializers import (
     ProviderWebhookSerializer,
     TransferCreateSerializer,
+    TransferActivitySerializer,
     TransferSerializer,
 )
 from transfers.services import (
@@ -82,6 +83,20 @@ class TransferDetailView(APIView):
         transfer = get_object_or_404(Transfer, pk=transfer_id)
         output = TransferSerializer(transfer)
 
+        return Response(output.data)
+
+
+class TransferActivityListView(APIView):
+    # noinspection PyMethodMayBeStatic
+    def get(self, _request, transfer_id):
+        get_object_or_404(Transfer, pk=transfer_id)
+        activities = (
+            TransferActivity.objects
+            .filter(transfer_id=transfer_id)
+            .select_related("provider_event")
+            .order_by("id")
+        )
+        output = TransferActivitySerializer(activities, many=True)
         return Response(output.data)
 
 

@@ -5,10 +5,34 @@ from uuid import UUID, uuid4
 from django.db import transaction
 
 from transfers.exceptions import InvalidTransition
-from transfers.models import Transfer
+from transfers.activity_notifications import activity_notifier
+from transfers.models import Transfer, TransferActivity, WebhookEvent
 
 
 logger = logging.getLogger(__name__)
+
+
+def _record_activity(
+    *,
+    transfer: Transfer,
+    activity_type: str,
+    source: str,
+    previous_status: str | None,
+    provider_event: WebhookEvent | None = None,
+) -> TransferActivity:
+    activity = TransferActivity.objects.create(
+        transfer=transfer,
+        type=activity_type,
+        source=source,
+        previous_status=previous_status,
+        new_status=transfer.status,
+        provider_event=provider_event,
+    )
+    transfer_id = transfer.pk
+    transaction.on_commit(
+        lambda: activity_notifier.notify(transfer_id)
+    )
+    return activity
 
 
 def generate_provider_transfer_id() -> str:
@@ -37,6 +61,13 @@ def submit_transfer(transfer_id: UUID) -> Transfer:
             "provider_transfer_id",
             "updated_at",
         ]
+    )
+
+    _record_activity(
+        transfer=transfer,
+        activity_type=TransferActivity.Type.SUBMITTED,
+        source=TransferActivity.Source.API,
+        previous_status=Transfer.Status.PENDING,
     )
 
     log_context = {
@@ -79,6 +110,13 @@ def cancel_transfer(transfer_id: UUID) -> Transfer:
         ]
     )
 
+    _record_activity(
+        transfer=transfer,
+        activity_type=TransferActivity.Type.CANCELLED,
+        source=TransferActivity.Source.API,
+        previous_status=Transfer.Status.PENDING,
+    )
+
     log_context = {
         "event": "transfer.cancelled",
         "transfer_id": str(transfer.pk),
@@ -98,7 +136,12 @@ def cancel_transfer(transfer_id: UUID) -> Transfer:
 
 
 @transaction.atomic
-def complete_transfer(transfer_id: UUID) -> Transfer:
+def complete_transfer(
+    transfer_id: UUID,
+    *,
+    source: str = TransferActivity.Source.SYSTEM,
+    provider_event: WebhookEvent | None = None,
+) -> Transfer:
     transfer = (
         Transfer.objects
         .select_for_update()
@@ -117,6 +160,14 @@ def complete_transfer(transfer_id: UUID) -> Transfer:
             "status",
             "updated_at",
         ]
+    )
+
+    _record_activity(
+        transfer=transfer,
+        activity_type=TransferActivity.Type.COMPLETED,
+        source=source,
+        previous_status=Transfer.Status.PROCESSING,
+        provider_event=provider_event,
     )
 
     log_context = {
@@ -138,7 +189,12 @@ def complete_transfer(transfer_id: UUID) -> Transfer:
 
 
 @transaction.atomic
-def fail_transfer(transfer_id: UUID) -> Transfer:
+def fail_transfer(
+    transfer_id: UUID,
+    *,
+    source: str = TransferActivity.Source.SYSTEM,
+    provider_event: WebhookEvent | None = None,
+) -> Transfer:
     transfer = (
         Transfer.objects
         .select_for_update()
@@ -157,6 +213,14 @@ def fail_transfer(transfer_id: UUID) -> Transfer:
             "status",
             "updated_at",
         ]
+    )
+
+    _record_activity(
+        transfer=transfer,
+        activity_type=TransferActivity.Type.FAILED,
+        source=source,
+        previous_status=Transfer.Status.PROCESSING,
+        provider_event=provider_event,
     )
 
     log_context = {
@@ -183,6 +247,13 @@ def create_transfer(*, amount: Decimal, currency: str, recipient_ref: str) -> Tr
         amount=amount,
         currency=currency,
         recipient_ref=recipient_ref,
+    )
+
+    _record_activity(
+        transfer=transfer,
+        activity_type=TransferActivity.Type.CREATED,
+        source=TransferActivity.Source.API,
+        previous_status=None,
     )
 
     log_context = {

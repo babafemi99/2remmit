@@ -206,3 +206,66 @@ class WebhookEvent(models.Model):
 
     class Meta:
         ordering = ["-received_at"]
+
+
+class TransferActivity(models.Model):
+    class Type(models.TextChoices):
+        CREATED = "created", "Created"
+        SUBMITTED = "submitted", "Submitted"
+        CANCELLED = "cancelled", "Cancelled"
+        COMPLETED = "completed", "Completed"
+        FAILED = "failed", "Failed"
+
+    class Source(models.TextChoices):
+        API = "api", "API"
+        PROVIDER = "provider", "Provider"
+        SYSTEM = "system", "System"
+
+    transfer = models.ForeignKey(
+        Transfer,
+        on_delete=models.PROTECT,
+        related_name="activities",
+    )
+
+    type = models.CharField(
+        max_length=16,
+        choices=Type,
+    )
+
+    source = models.CharField(
+        max_length=16,
+        choices=Source,
+    )
+
+    previous_status = models.CharField(
+        max_length=10,
+        choices=Transfer.Status,
+        null=True,
+        blank=True,
+    )
+
+    new_status = models.CharField(
+        max_length=10,
+        choices=Transfer.Status,
+    )
+
+    provider_event = models.OneToOneField(
+        WebhookEvent,
+        on_delete=models.SET_NULL,
+        related_name="transfer_activity",
+        null=True,
+        blank=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    class Meta:
+        ordering = ["id"]
+        indexes = [
+            models.Index(
+                fields=["transfer", "id"],
+                name="activity_transfer_cursor_idx",
+            ),
+        ]

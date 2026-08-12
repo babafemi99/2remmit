@@ -6,7 +6,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from transfers.exceptions import InvalidTransition, WebhookEventConflict
-from transfers.models import Transfer, WebhookEvent
+from transfers.models import Transfer, TransferActivity, WebhookEvent
 from transfers.serializers import ProviderWebhookSerializer
 from transfers.services import complete_transfer, fail_transfer
 
@@ -131,9 +131,17 @@ def process_provider_webhook(
 
     try:
         if event == ProviderWebhookSerializer.Event.COMPLETED:
-            complete_transfer(transfer.pk)
+            complete_transfer(
+                transfer.pk,
+                source=TransferActivity.Source.PROVIDER,
+                provider_event=webhook_event,
+            )
         else:
-            fail_transfer(transfer.pk)
+            fail_transfer(
+                transfer.pk,
+                source=TransferActivity.Source.PROVIDER,
+                provider_event=webhook_event,
+            )
     except InvalidTransition as exc:
         transfer.refresh_from_db(fields=["status"])
         webhook_event.processing_outcome = (

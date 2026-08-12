@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
-from transfers.models import Transfer
+from transfers.models import Transfer, TransferActivity
 
 
 class TransferCreateSerializer(serializers.Serializer):
@@ -37,6 +37,40 @@ class TransferSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = fields
+
+
+class TransferActivitySerializer(serializers.ModelSerializer):
+    event_id = serializers.CharField(
+        source="provider_event.event_id",
+        allow_null=True,
+        read_only=True,
+    )
+    message = serializers.SerializerMethodField()
+
+    MESSAGES = {
+        TransferActivity.Type.CREATED: "Transfer created",
+        TransferActivity.Type.SUBMITTED: "Submitted to provider",
+        TransferActivity.Type.CANCELLED: "Transfer cancelled",
+        TransferActivity.Type.COMPLETED: "Provider completed transfer",
+        TransferActivity.Type.FAILED: "Provider reported transfer failure",
+    }
+
+    class Meta:
+        model = TransferActivity
+        fields = [
+            "id",
+            "type",
+            "source",
+            "message",
+            "previous_status",
+            "new_status",
+            "event_id",
+            "created_at",
+        ]
+        read_only_fields = fields
+
+    def get_message(self, activity):
+        return self.MESSAGES[activity.type]
 
 
 class ProviderWebhookDataSerializer(serializers.Serializer):
