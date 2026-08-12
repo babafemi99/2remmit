@@ -31,12 +31,18 @@ export function ActivityTimeline({
   state,
   error,
   onRetry,
+  hasMore,
+  loadingMore,
+  onLoadMore,
 }: {
   activities: TransferActivity[];
   loading: boolean;
   state: LiveState;
   error?: string;
   onRetry: () => void;
+  hasMore: boolean;
+  loadingMore: boolean;
+  onLoadMore: () => void;
 }) {
   return (
     <section className="activity-section" aria-labelledby="activity-heading">
@@ -57,39 +63,51 @@ export function ActivityTimeline({
           </button>
         </div>
       ) : activities.length ? (
-        <ol className="activity-timeline">
-          {activities.map((activity) => {
-            const Icon = ICONS[activity.type];
-            return (
-              <li
-                key={activity.id}
-                className="activity-item"
-                data-type={activity.type}
-              >
-                <span className="activity-icon">
-                  <Icon aria-hidden="true" size={16} weight="bold" />
-                </span>
-                <div>
-                  <strong>{activity.message}</strong>
-                  <p>
-                    {activity.previous_status
-                      ? `${capitalize(activity.previous_status)} → ${capitalize(activity.new_status)}`
-                      : capitalize(activity.new_status)}
-                  </p>
-                  {activity.source === "provider" ? (
-                    <span>
-                      Provider event
-                      {activity.event_id ? ` · ${activity.event_id}` : ""}
-                    </span>
-                  ) : null}
-                </div>
-                <time dateTime={activity.created_at}>
-                  {formatTimestamp(activity.created_at)}
-                </time>
-              </li>
-            );
-          })}
-        </ol>
+        <>
+          <ol className="activity-timeline">
+            {activities.map((activity) => {
+              const Icon = ICONS[activity.type];
+              return (
+                <li
+                  key={activity.id}
+                  className="activity-item"
+                  data-type={activity.type}
+                >
+                  <span className="activity-icon">
+                    <Icon aria-hidden="true" size={16} weight="bold" />
+                  </span>
+                  <div>
+                    <strong>{activity.message}</strong>
+                    <p>
+                      {activity.previous_status
+                        ? `${capitalize(activity.previous_status)} → ${capitalize(activity.new_status)}`
+                        : capitalize(activity.new_status)}
+                    </p>
+                    {activity.source === "provider" ? (
+                      <span>
+                        Provider event
+                        {activity.event_id ? ` · ${activity.event_id}` : ""}
+                      </span>
+                    ) : null}
+                  </div>
+                  <time dateTime={activity.created_at}>
+                    {formatTimestamp(activity.created_at)}
+                  </time>
+                </li>
+              );
+            })}
+          </ol>
+          {hasMore ? (
+            <button
+              className="pagination-button"
+              type="button"
+              disabled={loadingMore}
+              onClick={onLoadMore}
+            >
+              {loadingMore ? "Loading…" : "Load earlier activity"}
+            </button>
+          ) : null}
+        </>
       ) : (
         <div className="activity-empty">No activity has been recorded yet.</div>
       )}

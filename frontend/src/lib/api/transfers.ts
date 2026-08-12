@@ -53,6 +53,40 @@ function isTransferActivity(value: unknown): value is TransferActivity {
   );
 }
 
+export type CursorPage<T> = {
+  results: T[];
+  nextCursor: string | null;
+};
+
+function cursorFromUrl(value: unknown) {
+  if (value === null) return null;
+  if (typeof value !== "string") return undefined;
+  try {
+    return new URL(value, "http://local").searchParams.get("cursor");
+  } catch {
+    return undefined;
+  }
+}
+
+function parseCursorPage<T>(
+  value: unknown,
+  predicate: (item: unknown) => item is T,
+): CursorPage<T> | null {
+  if (Array.isArray(value) && value.every(predicate)) {
+    return { results: value, nextCursor: null };
+  }
+  if (!value || typeof value !== "object") return null;
+  const page = value as Record<string, unknown>;
+  const nextCursor = cursorFromUrl(page.next);
+  if (
+    !Array.isArray(page.results) ||
+    !page.results.every(predicate) ||
+    nextCursor === undefined
+  )
+    return null;
+  return { results: page.results, nextCursor };
+}
+
 async function readJson(response: Response): Promise<unknown> {
   try {
     return await response.json();
@@ -113,14 +147,26 @@ export async function getTransfer(transferId: string) {
   return body;
 }
 
-export async function getTransfers() {
-  const body = await requestJson("/api/transfers");
-  if (!Array.isArray(body) || !body.every(isTransferDetail)) {
+export async function getTransfers(
+  options: {
+    cursor?: string | null;
+    query?: string;
+    status?: string;
+  } = {},
+) {
+  const params = new URLSearchParams();
+  if (options.cursor) params.set("cursor", options.cursor);
+  if (options.query) params.set("query", options.query);
+  if (options.status && options.status !== "all")
+    params.set("status", options.status);
+  const body = await requestJson(`/api/transfers?${params.toString()}`);
+  const page = parseCursorPage(body, isTransferDetail);
+  if (!page) {
     throw new TransferApiError(502, {
       detail: "The server returned an invalid transfer list.",
     });
   }
-  return body;
+  return page;
 }
 
 export type SimulatorAction = "simulate-success" | "simulate-failure";
@@ -157,16 +203,21 @@ export async function simulateProviderEvent(
   return body as SimulatorResult;
 }
 
-export async function getTransferActivities(transferId: string) {
+export async function getTransferActivities(
+  transferId: string,
+  cursor?: string | null,
+) {
+  const params = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
   const body = await requestJson(
-    `/api/transfers/${encodeURIComponent(transferId)}/activities/`,
+    `/api/transfers/${encodeURIComponent(transferId)}/activities/${params}`,
   );
-  if (!Array.isArray(body) || !body.every(isTransferActivity)) {
+  const page = parseCursorPage(body, isTransferActivity);
+  if (!page) {
     throw new TransferApiError(502, {
       detail: "The server returned invalid activity history.",
     });
   }
-  return body;
+  return page;
 }
 
 async function mutateTransfer(transferId: string, action: "submit" | "cancel") {

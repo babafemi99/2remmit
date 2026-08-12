@@ -10,13 +10,13 @@ function unavailable() {
   );
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const apiBaseUrl = process.env.DJANGO_API_BASE_URL;
   if (!apiBaseUrl) return unavailable();
 
   try {
     const response = await fetch(
-      `${apiBaseUrl.replace(/\/$/, "")}${UPSTREAM_PATH}`,
+      `${apiBaseUrl.replace(/\/$/, "")}${UPSTREAM_PATH}${new URL(request.url).search}`,
       { cache: "no-store" },
     );
     return new Response(await response.arrayBuffer(), {

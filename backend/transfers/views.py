@@ -15,6 +15,10 @@ from transfers.exceptions import (
 )
 from transfers.idempotency import create_transfer_idempotently
 from transfers.models import Transfer, TransferActivity
+from transfers.pagination import (
+    TransferActivityCursorPagination,
+    TransferCursorPagination,
+)
 from transfers.serializers import (
     ProviderWebhookSerializer,
     TransferCreateSerializer,
@@ -35,11 +39,24 @@ logger = logging.getLogger(__name__)
 
 class TransferListCreateView(APIView):
     # noinspection PyMethodMayBeStatic
-    def get(self, _request):
+    def get(self, request):
         transfers = Transfer.objects.all()
-        output = TransferSerializer(transfers, many=True)
+        query = request.query_params.get("query", "").strip()
+        transfer_status = request.query_params.get("status", "").strip()
+        if query:
+            transfers = transfers.filter(reference__icontains=query)
+        if transfer_status:
+            if transfer_status not in Transfer.Status.values:
+                return Response(
+                    {"status": ["Select a valid choice."]},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            transfers = transfers.filter(status=transfer_status)
 
-        return Response(output.data)
+        paginator = TransferCursorPagination()
+        page = paginator.paginate_queryset(transfers, request, view=self)
+        output = TransferSerializer(page, many=True)
+        return paginator.get_paginated_response(output.data)
 
     def post(self, request):
         serializer = TransferCreateSerializer(data=request.data)
@@ -79,7 +96,7 @@ class TransferListCreateView(APIView):
 
 class TransferDetailView(APIView):
     # noinspection PyMethodMayBeStatic
-    def get(self, _request, transfer_id):
+    def get(self, request, transfer_id):
         transfer = get_object_or_404(Transfer, pk=transfer_id)
         output = TransferSerializer(transfer)
 
@@ -88,16 +105,18 @@ class TransferDetailView(APIView):
 
 class TransferActivityListView(APIView):
     # noinspection PyMethodMayBeStatic
-    def get(self, _request, transfer_id):
+    def get(self, request, transfer_id):
         get_object_or_404(Transfer, pk=transfer_id)
         activities = (
             TransferActivity.objects
             .filter(transfer_id=transfer_id)
             .select_related("provider_event")
-            .order_by("id")
+            .order_by("-id")
         )
-        output = TransferActivitySerializer(activities, many=True)
-        return Response(output.data)
+        paginator = TransferActivityCursorPagination()
+        page = paginator.paginate_queryset(activities, request, view=self)
+        output = TransferActivitySerializer(page, many=True)
+        return paginator.get_paginated_response(output.data)
 
 
 class TransferSubmitView(APIView):

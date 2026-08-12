@@ -110,8 +110,35 @@ class TransferAPITests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
-            [item["id"] for item in response.data],
+            [item["id"] for item in response.data["results"]],
             [str(newer.pk), str(older.pk)],
+        )
+
+    def test_list_uses_cursor_pagination(self):
+        for index in range(21):
+            self.create_transfer(recipient_ref=f"RECIPIENT-{index}")
+
+        first = self.client.get(self.create_url)
+        self.assertEqual(first.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(first.data["results"]), 5)
+        self.assertIsNotNone(first.data["next"])
+
+        second = self.client.get(first.data["next"])
+        self.assertEqual(len(second.data["results"]), 5)
+        first_ids = {item["id"] for item in first.data["results"]}
+        self.assertTrue(
+            first_ids.isdisjoint(item["id"] for item in second.data["results"])
+        )
+
+    def test_list_filters_before_paginating(self):
+        pending = self.create_transfer(recipient_ref="PENDING")
+        self.create_transfer(status=Transfer.Status.COMPLETED)
+
+        response = self.client.get(self.create_url, {"status": "pending"})
+
+        self.assertEqual(
+            [item["id"] for item in response.data["results"]],
+            [str(pending.pk)],
         )
 
     def test_detail_returns_existing_transfer(self):

@@ -20,6 +20,9 @@ services:
   postgres:
     image: postgres:17-alpine
     container_name: 2remit-postgres
+    env_file:
+      - path: .env
+        required: false
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-2remit}
       POSTGRES_USER: ${POSTGRES_USER:-2remit}
@@ -34,15 +37,56 @@ services:
     stop_grace_period: 20s
     restart: unless-stopped
 
+  backend-tests:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      <<: *backend-environment
+      DB_CONN_MAX_AGE: "0"
+      ENABLE_PROVIDER_SIMULATOR: "false"
+    command:
+      - sh
+      - -c
+      - python manage.py check && python manage.py makemigrations --check --dry-run && python manage.py test --noinput
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  frontend-tests:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      target: builder
+    env_file:
+      - path: .env
+        required: false
+    command:
+      - sh
+      - -c
+      - npm run format:check && npm run lint && npm run type-check && npm test -- --run
+    restart: "no"
+
   setup:
     build:
       context: .
       dockerfile: backend/Dockerfile
+    env_file:
+      - path: .env
+        required: false
     environment: *backend-environment
     command: ["sh", "-c", "python manage.py migrate --noinput && python manage.py seed_demo"]
     depends_on:
       postgres:
         condition: service_healthy
+      backend-tests:
+        condition: service_completed_successfully
+      frontend-tests:
+        condition: service_completed_successfully
     restart: "no"
 
   backend:
@@ -50,6 +94,9 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     container_name: 2remit-backend
+    env_file:
+      - path: .env
+        required: false
     environment: *backend-environment
     ports:
       - "${BACKEND_PORT:-8000}:8000"
@@ -70,8 +117,12 @@ services:
       context: .
       dockerfile: frontend/Dockerfile
     container_name: 2remit-frontend
+    env_file:
+      - path: .env
+        required: false
     environment:
       DJANGO_API_BASE_URL: http://backend:8000
+      VICTORIA_LOGS_PUBLIC_URL: ${VICTORIA_LOGS_PUBLIC_URL:-http://localhost:9428/select/vmui/}
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
     depends_on:
@@ -89,6 +140,9 @@ services:
   victoria-logs:
     image: victoriametrics/victoria-logs:v1.52.0
     container_name: 2remit-victoria-logs
+    env_file:
+      - path: .env
+        required: false
     command:
       - -storageDataPath=/victoria-logs-data
       - -retentionPeriod=7d
@@ -107,6 +161,9 @@ services:
   vector:
     image: timberio/vector:0.48.0-alpine
     container_name: 2remit-vector
+    env_file:
+      - path: .env
+        required: false
     command: ["--config", "/etc/vector/vector.yaml"]
     volumes:
       - ./infra/vector/vector.yaml:/etc/vector/vector.yaml:ro

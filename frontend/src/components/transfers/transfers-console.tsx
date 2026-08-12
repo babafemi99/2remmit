@@ -35,26 +35,35 @@ export function TransfersConsole({
   const [status, setStatus] = useState(initialStatus);
   const [transfers, setTransfers] = useState<readonly Transfer[]>([]);
   const [loadState, setLoadState] = useState<LoadState>("loading");
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     let active = true;
 
-    loadTransfers(initialState === "error" && retryKey === 0)
-      .then((loaded) => {
-        if (active) {
-          setTransfers(loaded);
-          setLoadState("ready");
-        }
+    const timer = window.setTimeout(() => {
+      loadTransfers(initialState === "error" && retryKey === 0, {
+        query: query.trim(),
+        status,
       })
-      .catch(() => {
-        if (active) setLoadState("error");
-      });
+        .then((page) => {
+          if (active) {
+            setTransfers(page.transfers);
+            setNextCursor(page.nextCursor);
+            setLoadState("ready");
+          }
+        })
+        .catch(() => {
+          if (active) setLoadState("error");
+        });
+    }, 200);
 
     return () => {
       active = false;
+      window.clearTimeout(timer);
     };
-  }, [initialState, retryKey]);
+  }, [initialState, query, retryKey, status]);
 
   const updateUrl = useCallback(
     (nextQuery: string, nextStatus: string) => {
@@ -90,13 +99,29 @@ export function TransfersConsole({
     setRetryKey((value) => value + 1);
   };
 
+  const loadMore = async () => {
+    if (!nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const page = await loadTransfers(false, {
+        cursor: nextCursor,
+        query: query.trim(),
+        status,
+      });
+      setTransfers((current) => [...current, ...page.transfers]);
+      setNextCursor(page.nextCursor);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
   const visibleTransfers = useMemo(() => {
     const normalizedQuery = query.trim().toUpperCase();
-    return transfers.filter((transfer) => {
-      const matchesReference = transfer.reference.includes(normalizedQuery);
-      const matchesStatus = status === "all" || transfer.status === status;
-      return matchesReference && matchesStatus;
-    });
+    return transfers.filter(
+      (transfer) =>
+        transfer.reference.includes(normalizedQuery) &&
+        (status === "all" || transfer.status === status),
+    );
   }, [query, status, transfers]);
 
   return (
@@ -130,7 +155,19 @@ export function TransfersConsole({
             <TransferErrorState onRetry={retry} />
           ) : null}
           {loadState === "ready" && visibleTransfers.length ? (
-            <TransferList transfers={visibleTransfers} />
+            <>
+              <TransferList transfers={visibleTransfers} />
+              {nextCursor ? (
+                <button
+                  className="pagination-button"
+                  type="button"
+                  disabled={loadingMore}
+                  onClick={() => void loadMore()}
+                >
+                  {loadingMore ? "Loading…" : "Load more transfers"}
+                </button>
+              ) : null}
+            </>
           ) : null}
           {loadState === "ready" && !visibleTransfers.length ? (
             <TransferEmptyState />

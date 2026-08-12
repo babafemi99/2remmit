@@ -6,6 +6,7 @@ from django.db import transaction
 from django.db.models.deletion import ProtectedError
 from django.test import TestCase
 from django.urls import reverse
+from rest_framework.test import APIClient
 
 from transfers.idempotency import create_transfer_idempotently
 from transfers.models import Transfer, TransferActivity
@@ -39,6 +40,33 @@ class TransferActivityTests(TestCase):
         self.assertEqual(activities[0].new_status, Transfer.Status.PENDING)
         self.assertEqual(activities[1].previous_status, Transfer.Status.PENDING)
         self.assertEqual(activities[1].new_status, Transfer.Status.PROCESSING)
+
+    def test_activity_history_uses_cursor_pagination_without_duplicates(self):
+        transfer = self.create()
+        TransferActivity.objects.bulk_create(
+            [
+                TransferActivity(
+                    transfer=transfer,
+                    type=TransferActivity.Type.CREATED,
+                    source=TransferActivity.Source.SYSTEM,
+                    new_status=Transfer.Status.PENDING,
+                )
+                for _ in range(20)
+            ]
+        )
+        client = APIClient()
+        first = client.get(
+            reverse("transfer-activity-list", kwargs={"transfer_id": transfer.pk})
+        )
+        second = client.get(first.data["next"])
+
+        self.assertEqual(len(first.data["results"]), 5)
+        self.assertEqual(len(second.data["results"]), 5)
+        self.assertTrue(
+            set(item["id"] for item in first.data["results"]).isdisjoint(
+                item["id"] for item in second.data["results"]
+            )
+        )
 
     def test_transfer_with_activity_is_protected_from_deletion(self):
         transfer = self.create()
@@ -157,12 +185,14 @@ class TransferActivityAPITests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
-            [item["type"] for item in response.json()],
-            ["created", "submitted"],
+            [item["type"] for item in response.json()["results"]],
+            ["submitted", "created"],
         )
-        self.assertEqual(response.json()[0]["message"], "Transfer created")
-        self.assertNotIn("recipient_ref", response.json()[0])
-        self.assertNotIn("amount", response.json()[0])
+        self.assertEqual(
+            response.json()["results"][1]["message"], "Transfer created"
+        )
+        self.assertNotIn("recipient_ref", response.json()["results"][0])
+        self.assertNotIn("amount", response.json()["results"][0])
 
     def test_history_returns_not_found_and_is_read_only(self):
         import uuid

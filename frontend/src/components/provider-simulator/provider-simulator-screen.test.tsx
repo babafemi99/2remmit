@@ -56,6 +56,14 @@ afterEach(() => {
 });
 
 describe("ProviderSimulatorScreen", () => {
+  it("provides clear navigation back to transfers", async () => {
+    render(<ProviderSimulatorScreen />);
+
+    expect(
+      screen.getByRole("link", { name: "Back to transfers" }),
+    ).toHaveAttribute("href", "/transfers");
+  });
+
   it("loads and displays only processing transfers", async () => {
     renderScreen();
     expect(screen.getByText("Loading transfers")).toBeVisible();

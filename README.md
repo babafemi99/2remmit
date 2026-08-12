@@ -1,46 +1,109 @@
-# 2Remit
+<p align="center">
+  <img src="frontend/public/brand/logo.svg" alt="2Remit" width="220" />
+</p>
 
-2Remit is a Django/DRF payout API with a Next.js console, durable transfer activity, signed provider webhooks, and SSE live updates.
+<h1 align="center">2Remit</h1>
 
-## Container stack
+<p align="center">
+  A correctness-first cross-border payout console built with Django, DRF, Next.js and PostgreSQL.
+</p>
 
-Copy the documented environment values and replace the placeholder secrets:
+<p align="center">
+  <a href="docs/ENGINEERING.md"><strong>Read the engineering deep dive →</strong></a>
+</p>
+
+![2Remit transfers console](docs/assets/transfers-console.png)
+
+## Why 2Remit
+
+2Remit follows a transfer from creation to a terminal provider outcome without hiding the hard parts of payment engineering:
+
+- Explicit, transaction-safe transfer state machine
+- Idempotent creation with durable request fingerprints
+- HMAC-signed provider webhooks and delivery idempotency
+- Durable PostgreSQL activity history with live SSE updates
+- Server-side cursor pagination, reference search and status filtering
+- Development-only provider simulator
+- Docker Compose, GitHub Actions CI and structured JSON logs via Vector and VictoriaLogs
+
+> Tests are mandatory for this project and form part of its acceptance criteria.
+
+## Product walkthrough
+
+| Review a payout | Track provider processing |
+| --- | --- |
+| ![Create transfer review](docs/assets/create-transfer-review.png) | ![Processing transfer detail](docs/assets/transfer-detail-processing.png) |
+
+### Simulate a real provider callback
+
+![Local provider simulator](docs/assets/provider-simulator.png)
+
+The simulator sends an immediate signed HTTP webhook through the real handler. It does not mutate a transfer directly.
+
+## Quick start
 
 ```bash
+git clone https://github.com/babafemi99/2remmit.git
+cd 2remmit
 cp .env.example .env
-docker compose up --build
-```
-
-Open the frontend at <http://localhost:3000>, the API at <http://localhost:8000/api/transfers/>, and VictoriaLogs at <http://localhost:9428/select/vmui/>. Startup waits for PostgreSQL, applies migrations once, and runs the idempotent demo seed before starting the single-worker ASGI backend.
-
-Convenience commands:
-
-```bash
 make compose-up
-make compose-logs
-make seed
-make test
-make compose-down
 ```
 
-`make seed` can be run repeatedly. It creates only missing stable demo records and never changes existing records.
+Review the local-only values in `.env` before starting. `make compose-up` passes that file explicitly to Docker Compose, builds the images, runs both test suites as startup gates, applies migrations, seeds demo data, and starts the healthy stack. If either test gate fails, the applications do not start.
 
-## Provider and SSE demonstration
+| Service | URL |
+| --- | --- |
+| 2Remit frontend | http://localhost:3000/transfers |
+| Django API | http://localhost:8000/api/transfers/ |
+| Provider simulator | http://localhost:3000/dev |
+| VictoriaLogs UI | http://localhost:9428/select/vmui/ |
 
-Create or choose a pending transfer, submit it, open its detail page, then use `/dev` to send a success or failure event. The simulator sends a real HMAC-signed HTTP webhook immediately. The resulting activity commits with the FSM transition and wakes the open SSE stream.
-
-The current live notifier intentionally supports one backend application worker. Multi-worker deployment requires replacing the process-local wake-up mechanism while retaining the durable activity cursor contract.
-
-## Logs
-
-Django and Next.js emit JSON to container stdout/stderr. Vector reads only the backend and frontend container logs and sends them to VictoriaLogs. Secrets, signatures, idempotency keys, sensitive headers, and request bodies are not application log fields.
-
-Example LogsQL queries against the HTTP API:
+If port 3000 is occupied:
 
 ```bash
-curl -G 'http://localhost:9428/select/logsql/query' --data-urlencode 'query=service:backend'
-curl -G 'http://localhost:9428/select/logsql/query' --data-urlencode 'query=service:backend AND event:webhook.processed'
-curl -G 'http://localhost:9428/select/logsql/query' --data-urlencode 'query=service:frontend'
+FRONTEND_PORT=3100 make compose-up
 ```
 
-The built-in VictoriaLogs UI is available at <http://localhost:9428/select/vmui/>. Volumes persist PostgreSQL, VictoriaLogs, and Vector checkpoints across ordinary Compose restarts.
+Startup waits for PostgreSQL, applies migrations, and seeds five stable demo transfers. Seeding is safe to repeat:
+
+```bash
+make seed
+```
+
+## Five-minute demo
+
+1. Open `/transfers`, then create a transfer: it starts **Pending**.
+2. Cancel a pending transfer to demonstrate the immutable cancellation path.
+3. Submit another transfer: it becomes **Processing** and receives a provider ID.
+4. Keep its detail page open, then use `/dev` to send Success or Failure.
+5. The signed webhook records durable activity; SSE updates the open detail view immediately.
+
+## Run the checks
+
+```bash
+make test
+```
+
+This runs the PostgreSQL-backed Django suite plus frontend formatting, ESLint, strict TypeScript, Vitest and the production Next.js build. See the [full verification matrix](docs/ENGINEERING.md#tests-and-correctness-evidence).
+
+## Architecture
+
+![2Remit architecture](docs/assets/architecture-simple.png)
+
+**Stack:** Python 3.14, Django 5.2, Django REST Framework, PostgreSQL 17, Next.js 16, React 19, TypeScript, Docker Compose, Vector and VictoriaLogs.
+
+## Scope and limitations
+
+Authentication is intentionally omitted for this open local assessment API; the implications and production boundary are [documented explicitly](docs/ENGINEERING.md#security-boundary). KYC, wallets, FX pricing, a double-entry ledger, real provider integration and cloud deployment are deliberately excluded.
+
+The primary runtime limitation is that SSE wake-ups are process-local and Compose intentionally runs one ASGI worker. Durable activity replay prevents data loss, but multi-worker live fan-out would require PostgreSQL `LISTEN/NOTIFY` or shared pub/sub.
+
+## Submission links
+
+- [Engineering deep dive](docs/ENGINEERING.md)
+- Loom walkthrough: _to be added_
+- Live deployment: not deployed; the verified Docker Compose environment is the submission runtime
+
+## Time spent
+
+Not recorded. Add the actual value before submission.

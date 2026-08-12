@@ -7,5 +7,12 @@ export const metadata: Metadata = {
 };
 
 export default function ProviderSimulatorPage() {
-  return <ProviderSimulatorScreen />;
+  return (
+    <ProviderSimulatorScreen
+      victoriaLogsUrl={
+        process.env.VICTORIA_LOGS_PUBLIC_URL ??
+        "http://localhost:9428/select/vmui/"
+      }
+    />
+  );
 }

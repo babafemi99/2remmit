@@ -64,6 +64,10 @@ export function TransferDetailScreen({ transferId }: { transferId: string }) {
   const [activities, setActivities] = useState<TransferActivity[]>([]);
   const [activityLoaded, setActivityLoaded] = useState(false);
   const [activityLoading, setActivityLoading] = useState(false);
+  const [activityLoadingMore, setActivityLoadingMore] = useState(false);
+  const [activityNextCursor, setActivityNextCursor] = useState<string | null>(
+    null,
+  );
   const [initialError, setInitialError] = useState("");
   const [activityError, setActivityError] = useState("");
   const [actionError, setActionError] = useState("");
@@ -74,8 +78,9 @@ export function TransferDetailScreen({ transferId }: { transferId: string }) {
   const loadActivities = useCallback(async () => {
     setActivityLoading(true);
     try {
-      const next = await getTransferActivities(transferId);
-      setActivities((current) => mergeActivities(current, next));
+      const page = await getTransferActivities(transferId);
+      setActivities((current) => mergeActivities(current, page.results));
+      setActivityNextCursor(page.nextCursor);
       setActivityError("");
       setActivityLoaded(true);
     } catch (error) {
@@ -87,6 +92,22 @@ export function TransferDetailScreen({ transferId }: { transferId: string }) {
       setActivityLoading(false);
     }
   }, [transferId]);
+
+  const loadEarlierActivities = useCallback(async () => {
+    if (!activityNextCursor || activityLoadingMore) return;
+    setActivityLoadingMore(true);
+    try {
+      const page = await getTransferActivities(transferId, activityNextCursor);
+      setActivities((current) => mergeActivities(current, page.results));
+      setActivityNextCursor(page.nextCursor);
+    } catch (error) {
+      setActivityError(
+        safeMessage(error, "Earlier activity is temporarily unavailable."),
+      );
+    } finally {
+      setActivityLoadingMore(false);
+    }
+  }, [activityLoadingMore, activityNextCursor, transferId]);
 
   const load = useCallback(async () => {
     setInitialState("loading");
@@ -232,6 +253,9 @@ export function TransferDetailScreen({ transferId }: { transferId: string }) {
           state={activityLoaded ? liveState : "paused"}
           error={activityError}
           onRetry={() => void refreshAll()}
+          hasMore={Boolean(activityNextCursor)}
+          loadingMore={activityLoadingMore}
+          onLoadMore={() => void loadEarlierActivities()}
         />
       </section>
       {dialog === "submit" ? (

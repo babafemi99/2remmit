@@ -2,8 +2,10 @@
 
 import {
   ArrowClockwise,
+  ArrowLeft,
   CheckCircle,
   Flask,
+  ArrowSquareOut,
   WarningCircle,
   XCircle,
 } from "@phosphor-icons/react";
@@ -31,7 +33,11 @@ function safeMessage(error: unknown) {
     : "The provider simulator is temporarily unavailable.";
 }
 
-export function ProviderSimulatorScreen() {
+export function ProviderSimulatorScreen({
+  victoriaLogsUrl = "http://localhost:9428/select/vmui/",
+}: {
+  victoriaLogsUrl?: string;
+}) {
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [transfers, setTransfers] = useState<TransferDetail[]>([]);
   const [selectedId, setSelectedId] = useState("");
@@ -45,9 +51,9 @@ export function ProviderSimulatorScreen() {
     setLoadState("loading");
     setError("");
     try {
-      const processing = (await getTransfers()).filter(
-        (transfer) => transfer.status === "processing",
-      );
+      const processing = (
+        await getTransfers({ status: "processing" })
+      ).results.filter((transfer) => transfer.status === "processing");
       setTransfers(processing);
       setSelectedId((current) =>
         processing.some((transfer) => transfer.id === current)
@@ -105,6 +111,10 @@ export function ProviderSimulatorScreen() {
   return (
     <ConsoleShell>
       <section className="console-content simulator-content">
+        <Link href="/transfers" className="back-link">
+          <ArrowLeft aria-hidden="true" size={16} weight="bold" />
+          Back to transfers
+        </Link>
         <header className="simulator-header">
           <div className="simulator-title-row">
             <span className="simulator-icon">
@@ -231,6 +241,18 @@ export function ProviderSimulatorScreen() {
           This tool never changes a transfer directly. It sends the same signed
           HTTP webhook a provider would send; PostgreSQL remains authoritative.
         </aside>
+        <a
+          className="victoria-logs-link"
+          href={victoriaLogsUrl}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <span>
+            <strong>View application logs</strong>
+            <small>Open VictoriaLogs in a new tab</small>
+          </span>
+          <ArrowSquareOut aria-hidden="true" weight="bold" />
+        </a>
       </section>
 
       {dialog && selected ? (

@@ -172,6 +172,27 @@ button {
     transform 160ms ease;
 }
 
+.console-navigation {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.home-link {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 6px;
+  border-radius: 9px;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.home-link:hover {
+  color: var(--color-blue);
+}
+
 .developer-link:hover {
   transform: translateY(-1px);
 }
@@ -404,6 +425,28 @@ button {
 
 .results-shell {
   min-height: 314px;
+}
+
+.pagination-button {
+  display: block;
+  margin: 14px auto 0;
+  padding: 8px 13px;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: var(--color-surface);
+  color: var(--color-blue);
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pagination-button:hover:not(:disabled) {
+  background: #f7f9ff;
+}
+.pagination-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
 }
 
 .transfer-list {
@@ -1664,6 +1707,35 @@ button {
   color: var(--color-muted);
   font-size: 0.78rem;
   line-height: 1.65;
+}
+
+.victoria-logs-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: #f8faff;
+  color: var(--color-deep-navy);
+}
+
+.victoria-logs-link span {
+  display: grid;
+  gap: 2px;
+}
+.victoria-logs-link strong {
+  font-size: 0.72rem;
+}
+.victoria-logs-link small {
+  color: var(--color-muted);
+  font-size: 0.64rem;
+}
+.victoria-logs-link:hover {
+  border-color: #aebff5;
+  background: #f2f5ff;
 }
 .simulator-action-error {
   display: flex;

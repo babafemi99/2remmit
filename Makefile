@@ -35,16 +35,16 @@ frontend:
 	@cd frontend && npm run dev
 
 compose-up:
-	docker compose up --build -d
+	docker compose --env-file .env up --build -d
 
 compose-down:
-	docker compose down
+	docker compose --env-file .env down
 
 compose-logs:
-	docker compose logs --follow backend frontend vector victoria-logs
+	docker compose --env-file .env logs --follow backend frontend vector victoria-logs
 
 seed:
-	docker compose run --rm setup python manage.py seed_demo
+	docker compose --env-file .env run --rm setup python manage.py seed_demo
 
 test:
 	@cd backend && ../$(PYTHON) manage.py test

@@ -42,21 +42,25 @@ export const TRANSFER_FIXTURES: readonly Transfer[] = [
 
 export async function loadTransfers(
   shouldFail = false,
-): Promise<readonly Transfer[]> {
+  options: { cursor?: string | null; query?: string; status?: string } = {},
+): Promise<{ transfers: Transfer[]; nextCursor: string | null }> {
   if (shouldFail) {
     throw new Error("The transfer list could not be loaded.");
   }
 
-  const body = await getTransfers();
-  return body.map((transfer) => ({
-    id: transfer.id,
-    reference: transfer.reference,
-    recipientReference: transfer.recipient_ref,
-    amount: Number(transfer.amount),
-    currency: transfer.currency,
-    status: transfer.status,
-    updatedLabel: formatUpdatedAt(transfer.updated_at),
-  }));
+  const page = await getTransfers(options);
+  return {
+    nextCursor: page.nextCursor,
+    transfers: page.results.map((transfer) => ({
+      id: transfer.id,
+      reference: transfer.reference,
+      recipientReference: transfer.recipient_ref,
+      amount: Number(transfer.amount),
+      currency: transfer.currency,
+      status: transfer.status,
+      updatedLabel: formatUpdatedAt(transfer.updated_at),
+    })),
+  };
 }
 
 function formatUpdatedAt(value: string) {
