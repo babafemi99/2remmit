@@ -151,6 +151,13 @@ class TransferAPITests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
 
+    def test_submit_unknown_transfer_returns_not_found(self):
+        response = self.client.post(
+            reverse("transfer-submit", kwargs={"transfer_id": uuid4()})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
     def test_cancel_pending_transfer_returns_cancelled_transfer(self):
         transfer = self.create_transfer()
 
@@ -171,3 +178,9 @@ class TransferAPITests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
 
+    def test_cancel_unknown_transfer_returns_not_found(self):
+        response = self.client.post(
+            reverse("transfer-cancel", kwargs={"transfer_id": uuid4()})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)

@@ -1,5 +1,6 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import status
+from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -72,6 +73,8 @@ class TransferSubmitView(APIView):
     def post(self, _request, transfer_id):
         try:
             transfer = submit_transfer(transfer_id)
+        except Transfer.DoesNotExist as exc:
+            raise NotFound("Transfer not found") from exc
         except InvalidTransition as exc:
             return Response(
                 {"detail": str(exc)},
@@ -86,6 +89,8 @@ class TransferCancelView(APIView):
     def post(self, _request, transfer_id):
         try:
             transfer = cancel_transfer(transfer_id)
+        except Transfer.DoesNotExist as exc:
+            raise NotFound("Transfer not found") from exc
         except InvalidTransition as exc:
             return Response(
                 {"detail": str(exc)},
