@@ -26,11 +26,56 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-lwy$%!md__me1&kw500(e8xc0pad5(fi8ge9b!x(lzf_j1vqv!'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get("DJANGO_DEBUG", "true").lower() == "true"
 
 ALLOWED_HOSTS = []
 
 PROVIDER_WEBHOOK_SECRET = os.environ.get("PROVIDER_WEBHOOK_SECRET", "")
+
+raw_provider_simulator_enabled = os.environ.get(
+    "ENABLE_PROVIDER_SIMULATOR",
+    "false",
+).lower()
+
+if raw_provider_simulator_enabled not in {"true", "false"}:
+    raise ImproperlyConfigured(
+        "ENABLE_PROVIDER_SIMULATOR must be true or false"
+    )
+
+ENABLE_PROVIDER_SIMULATOR = raw_provider_simulator_enabled == "true"
+
+if ENABLE_PROVIDER_SIMULATOR and not DEBUG:
+    raise ImproperlyConfigured(
+        "Provider simulator cannot be enabled when DEBUG is false"
+    )
+
+PROVIDER_SIMULATOR_WEBHOOK_URL = os.environ.get(
+    "PROVIDER_SIMULATOR_WEBHOOK_URL",
+    "http://127.0.0.1:8000/api/webhooks/provider/",
+)
+PROVIDER_SIMULATOR_ALLOWED_HOSTS = {
+    host.strip().lower()
+    for host in os.environ.get(
+        "PROVIDER_SIMULATOR_ALLOWED_HOSTS",
+        "127.0.0.1,localhost,::1,api",
+    ).split(",")
+    if host.strip()
+}
+
+if ENABLE_PROVIDER_SIMULATOR:
+    from urllib.parse import urlparse
+
+    simulator_webhook_url = urlparse(PROVIDER_SIMULATOR_WEBHOOK_URL)
+
+    if (
+        simulator_webhook_url.scheme not in {"http", "https"}
+        or not simulator_webhook_url.hostname
+        or simulator_webhook_url.hostname.lower()
+        not in PROVIDER_SIMULATOR_ALLOWED_HOSTS
+    ):
+        raise ImproperlyConfigured(
+            "PROVIDER_SIMULATOR_WEBHOOK_URL must use an explicitly allowed host"
+        )
 
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
 LOG_DESTINATION = os.environ.get("LOG_DESTINATION", "console").lower()
