@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180" role="img" aria-labelledby="title description">
+  <title id="title">2Remit mark</title>
+  <desc id="description">A compact 2R symbol formed with two-way transfer arrows.</desc>
+
+  <path d="M28 65C28 42 46 26 71 26h40c27 0 45 17 45 42 0 19-10 31-29 43l-48 29h77v22H28v-19c0-13 6-22 19-30l62-38c8-5 12-10 12-17 0-8-6-13-17-13H72c-10 0-17 7-17 20H28Z" fill="#2563EB"/>
+  <path d="m32 109 55-34V60l38 26-38 27V97l-55 34v-22Z" fill="#6D4AFF"/>
+  <path d="m151 129-48 29v15l-38-26 38-27v16l48-29v22Z" fill="#102A43"/>
+</svg>

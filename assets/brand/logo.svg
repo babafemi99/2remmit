@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="180" viewBox="0 0 640 180" role="img" aria-labelledby="title description">
+  <title id="title">2Remit</title>
+  <desc id="description">The 2Remit wordmark with a two-way cross-border transfer symbol.</desc>
+  <defs>
+    <linearGradient id="transfer" x1="36" y1="45" x2="148" y2="133" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2563EB"/>
+      <stop offset="1" stop-color="#6D4AFF"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 2R transfer mark -->
+  <g transform="translate(24 18)">
+    <path d="M28 47C28 24 46 8 71 8h40c27 0 45 17 45 42 0 19-10 31-29 43l-48 29h77v22H28v-19c0-13 6-22 19-30l62-38c8-5 12-10 12-17 0-8-6-13-17-13H72c-10 0-17 7-17 20H28Z" fill="#2563EB"/>
+    <path d="M32 91 87 57v-15l38 26-38 27V79L32 113V91Z" fill="#6D4AFF"/>
+    <path d="m151 111-48 29v15l-38-26 38-27v16l48-29v22Z" fill="#102A43"/>
+  </g>
+
+  <!-- Wordmark. Manrope is loaded by the product; fallbacks preserve layout. -->
+  <text x="218" y="115" fill="#102A43" font-family="Manrope, Avenir Next, Arial, sans-serif" font-size="74" font-weight="750" letter-spacing="-3.4">2Remit</text>
+</svg>
