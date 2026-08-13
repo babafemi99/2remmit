@@ -11,6 +11,8 @@ __pycache__/
 .idea/
 .DS_Store
 .coverage
+AGENTS.md
+CLAUDE.md
 
 # Temporary notes
 /tmp/
@@ -18,3 +20,7 @@ __pycache__/
 # Next.js
 node_modules/
 .next/
+*.tsbuildinfo
+
+# Testing
+coverage/

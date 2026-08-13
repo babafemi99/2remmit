@@ -21,7 +21,9 @@ The supplied assessment instructions prioritize correctness, explicit state tran
 
 ## Architecture
 
-![2Remit client and durable data path](assets/architecture.png)
+<p align="center">
+  <img src="../assets/architecture.png" alt="2Remit client and durable data path" width="920" />
+</p>
 
 Domain transitions live in synchronous services, not views, idempotency code, webhooks or the simulator. PostgreSQL is authoritative for transfers, webhook claims and activities. The in-process notifier carries no business payload; it only wakes an SSE subscriber, which then queries committed rows.
 
@@ -230,6 +232,8 @@ On a clean database the verified contract is 5 transfers and 11 activities. A se
 
 Django, Uvicorn and the Next.js wrapper emit structured JSON only to stdout/stderr. Vector tails only the backend/frontend containers, parses JSON, adds a service label and asynchronously posts newline-delimited records to VictoriaLogs. The applications have no VictoriaLogs dependency.
 
+![Structured application logs in VictoriaLogs](assets/victoria-logs.png)
+
 Verified LogsQL queries:
 
 ```text
@@ -292,14 +296,3 @@ Git history is incremental: domain model, API, regression fixes, PostgreSQL test
 | Assumptions and auth omission | [Assumptions](#assumptions), [Security](#security-boundary) |
 | Docker, seed, logs and CI | [Docker](#docker-and-runtime-design), [Seed](#idempotent-seed), [Logs](#logging-and-victorialogs), [CI](#cicd) |
 | Exclusions, risks and next steps | [Left out](#deliberately-left-out), [Limitations](#known-limitations-and-risks), [More time](#what-i-would-do-with-more-time) |
-
-## Submission checklist
-
-- [ ] Private GitHub repository access granted or ZIP prepared
-- [x] Backend and frontend included
-- [x] Product README and engineering deep dive included
-- [x] Runnable backend/frontend tests
-- [x] Idempotent demo seed and signed simulator instructions
-- [ ] Actual total time added to README if supplied
-- [ ] Loom URL added if recorded
-- [ ] Submission sent to HR before the invitation deadline

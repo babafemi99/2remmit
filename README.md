@@ -101,9 +101,4 @@ The primary runtime limitation is that SSE wake-ups are process-local and Compos
 ## Submission links
 
 - [Engineering deep dive](docs/ENGINEERING.md)
-- Loom walkthrough: _to be added_
 - Live deployment: not deployed; the verified Docker Compose environment is the submission runtime
-
-## Time spent
-
-Not recorded. Add the actual value before submission.

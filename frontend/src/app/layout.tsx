@@ -13,6 +13,10 @@ const manrope = Manrope({
 export const metadata: Metadata = {
   title: "2Remit",
   description: "2Remit payout and remittance application",
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    shortcut: "/icon.svg",
+  },
 };
 
 export default function RootLayout({
