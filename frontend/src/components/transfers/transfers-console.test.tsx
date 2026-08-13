@@ -119,10 +119,10 @@ describe("TransfersConsole", () => {
       "href",
       "/transfers/new",
     );
-    expect(screen.getByRole("link", { name: /developer/i })).toHaveAttribute(
-      "href",
-      "/dev",
-    );
+    const developerLink = screen.getByRole("link", { name: /developer/i });
+    expect(developerLink).toHaveAttribute("href", "/dev");
+    expect(developerLink).toHaveAttribute("target", "_blank");
+    expect(developerLink).toHaveAttribute("rel", "noopener noreferrer");
   });
 
   it("keeps content visible when reduced motion is requested", async () => {

@@ -29,7 +29,12 @@ export function ConsoleHeader() {
           </Link>
         ) : null}
         {pathname !== "/dev" ? (
-          <Link href="/dev" className="developer-link">
+          <Link
+            href="/dev"
+            className="developer-link"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             <span>Developer</span>
             <span className="demo-badge">Demo</span>
           </Link>

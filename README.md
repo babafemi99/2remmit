@@ -9,6 +9,12 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/babafemi99/2remmit/actions/workflows/ci.yml">
+    <img src="https://github.com/babafemi99/2remmit/actions/workflows/ci.yml/badge.svg" alt="CI status" />
+  </a>
+</p>
+
+<p align="center">
   <a href="docs/ENGINEERING.md"><strong>Read the engineering deep dive →</strong></a>
 </p>
 
