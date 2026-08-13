@@ -19,7 +19,6 @@ export function TrustStrip() {
           </span>
         ))}
       </div>
-      <p>Local assessment environment</p>
     </footer>
   );
 }

@@ -1,5 +1,6 @@
 import { ArrowLeft, LockKey } from "@phosphor-icons/react";
 
+import { InlineSpinner } from "@/components/loading/inline-spinner";
 import type { CreateTransferRequest } from "@/types/create-transfer";
 import { CURRENCY_SYMBOLS, formatMoneyAmount } from "@/lib/money";
 
@@ -74,19 +75,10 @@ export function TransferReview({
           aria-busy={submitting}
           onClick={onSubmit}
         >
-          {submitting ? <TransferButtonLoader /> : null}
+          {submitting ? <InlineSpinner /> : null}
           {submitting ? "Creating transfer…" : "Create transfer"}
         </button>
       </div>
     </section>
-  );
-}
-
-function TransferButtonLoader() {
-  return (
-    <span className="transfer-button-loader" aria-hidden="true">
-      <i />
-      <i />
-    </span>
   );
 }

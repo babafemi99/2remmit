@@ -15,7 +15,9 @@ import { toast } from "sonner";
 
 import { ConfirmationDialog } from "@/components/transfer-detail/confirmation-dialog";
 import { ConsoleShell } from "@/components/transfers/console-shell";
+import { StatusBadge } from "@/components/transfers/status-badge";
 import { BrandedLoader } from "@/components/transfers/transfer-states";
+import { CURRENCY_SYMBOLS, formatMoneyAmount } from "@/lib/money";
 import {
   getTransfers,
   simulateProviderEvent,
@@ -161,28 +163,45 @@ export function ProviderSimulatorScreen({
 
         {loadState === "ready" && transfers.length ? (
           <div className="simulator-panel">
-            <label htmlFor="simulator-transfer">Processing transfer</label>
-            <select
-              id="simulator-transfer"
-              value={selectedId}
-              disabled={busy}
-              onChange={(event) => {
-                setSelectedId(event.target.value);
-                setResult(null);
-              }}
-            >
+            <fieldset className="simulator-transfer-list" disabled={busy}>
+              <legend>Choose a processing transfer</legend>
               {transfers.map((transfer) => (
-                <option key={transfer.id} value={transfer.id}>
-                  {transfer.reference} · {transfer.currency} {transfer.amount}
-                </option>
+                <label
+                  key={transfer.id}
+                  className="simulator-transfer-option"
+                  data-selected={selectedId === transfer.id}
+                >
+                  <input
+                    type="radio"
+                    name="simulator-transfer"
+                    value={transfer.id}
+                    checked={selectedId === transfer.id}
+                    onChange={() => {
+                      setSelectedId(transfer.id);
+                      setResult(null);
+                    }}
+                  />
+                  <span className="simulator-transfer-copy">
+                    <span className="simulator-transfer-heading">
+                      <strong className="numeric">{transfer.reference}</strong>
+                      <StatusBadge status="processing" />
+                    </span>
+                    <span className="numeric simulator-transfer-recipient">
+                      {transfer.recipient_ref}
+                    </span>
+                  </span>
+                  <strong className="numeric simulator-transfer-amount">
+                    <span aria-hidden="true">
+                      {CURRENCY_SYMBOLS[transfer.currency]}
+                    </span>
+                    {formatMoneyAmount(transfer.amount)}
+                    <small>{transfer.currency}</small>
+                  </strong>
+                </label>
               ))}
-            </select>
+            </fieldset>
             {selected ? (
               <div className="simulator-selection">
-                <div>
-                  <span>Recipient reference</span>
-                  <strong>{selected.recipient_ref}</strong>
-                </div>
                 <div>
                   <span>Provider transfer ID</span>
                   <strong className="numeric">

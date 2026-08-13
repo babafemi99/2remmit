@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { InlineSpinner } from "@/components/loading/inline-spinner";
 import { ConsoleShell } from "@/components/transfers/console-shell";
 import { TransferList } from "@/components/transfers/transfer-list";
 import {
@@ -164,6 +165,7 @@ export function TransfersConsole({
                   disabled={loadingMore}
                   onClick={() => void loadMore()}
                 >
+                  {loadingMore ? <InlineSpinner /> : null}
                   {loadingMore ? "Loading…" : "Load more transfers"}
                 </button>
               ) : null}

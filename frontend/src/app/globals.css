@@ -681,13 +681,6 @@ button {
   color: var(--color-blue);
 }
 
-.trust-footer p {
-  margin: 14px 0 0;
-  color: var(--color-muted);
-  font-size: 0.6875rem;
-  text-align: center;
-}
-
 .create-transfer-content {
   min-height: 530px;
 }
@@ -1215,7 +1208,7 @@ button {
 }
 
 .create-success,
-.create-route-loading,
+.page-route-loading,
 .detail-placeholder {
   display: flex;
   min-height: 390px;
@@ -1226,14 +1219,14 @@ button {
 }
 
 .create-success strong,
-.create-route-loading strong {
+.page-route-loading strong {
   margin-top: 6px;
   color: var(--color-navy);
   font-size: 1rem;
 }
 
 .create-success p,
-.create-route-loading p,
+.page-route-loading p,
 .detail-placeholder > p:not(.eyebrow) {
   margin: 4px 0 0;
   color: var(--color-muted);
@@ -1776,22 +1769,100 @@ button {
   border-radius: 15px;
   background: #fbfcff;
 }
-.simulator-panel > label {
+.simulator-transfer-list {
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.simulator-transfer-list legend {
+  margin-bottom: 9px;
+  padding: 0;
   color: var(--color-navy);
   font-size: 0.75rem;
   font-weight: 700;
 }
-.simulator-panel select {
-  width: 100%;
-  min-height: 46px;
-  padding: 0 40px 0 13px;
+.simulator-transfer-option {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  min-height: 74px;
+  padding: 13px 14px 13px 42px;
   border: 1px solid #dbe3ee;
-  border-radius: 11px;
+  border-radius: 12px;
   background: #fff;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+.simulator-transfer-option:hover {
+  border-color: #b9ccf4;
+  background: #f8faff;
+  transform: translateY(-1px);
+}
+.simulator-transfer-option[data-selected="true"] {
+  border-color: var(--color-blue);
+  background: #f4f7ff;
+  box-shadow: 0 0 0 2px rgb(47 105 232 / 9%);
+}
+.simulator-transfer-option:has(input:focus-visible) {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.simulator-transfer-option input {
+  position: absolute;
+  left: 15px;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--color-blue);
+}
+.simulator-transfer-copy {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+.simulator-transfer-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.simulator-transfer-heading > strong {
+  overflow: hidden;
   color: var(--color-navy);
-  font: inherit;
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.simulator-transfer-heading .status-badge {
+  flex: 0 0 auto;
+}
+.simulator-transfer-recipient {
+  overflow: hidden;
+  color: var(--color-muted);
+  font-size: 0.68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.simulator-transfer-amount {
+  display: flex;
+  align-items: baseline;
+  color: var(--color-navy);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+.simulator-transfer-amount small {
+  margin-left: 5px;
+  color: var(--color-muted);
+  font-size: 0.6rem;
+  font-weight: 700;
 }
 .simulator-selection {
   display: grid;

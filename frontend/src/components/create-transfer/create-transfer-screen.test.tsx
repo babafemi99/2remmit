@@ -73,8 +73,14 @@ afterEach(() => {
 });
 
 describe("CreateTransferScreen", () => {
-  it("requires all fields before review", () => {
+  it("defaults to NGN and requires the remaining fields before review", () => {
     render(<CreateTransferScreen />);
+    expect(
+      screen.getByRole("radio", { name: /NGN.*Nigerian naira/i }),
+    ).toBeChecked();
+    expect(
+      screen.getByLabelText("Amount").previousElementSibling,
+    ).toHaveTextContent("₦");
     expect(
       screen.getByRole("button", { name: "Review transfer" }),
     ).toBeDisabled();
@@ -82,7 +88,6 @@ describe("CreateTransferScreen", () => {
       screen.getByRole("button", { name: "Review transfer" }).closest("form")!,
     );
     expect(screen.getByText("Enter an amount.")).toBeInTheDocument();
-    expect(screen.getByText("Select a currency.")).toBeInTheDocument();
     expect(
       screen.getByText("Enter a recipient reference."),
     ).toBeInTheDocument();
@@ -118,9 +123,7 @@ describe("CreateTransferScreen", () => {
     render(<CreateTransferScreen />);
     const amount = screen.getByLabelText("Amount");
     await user.type(amount, "250000");
-    await user.click(
-      screen.getByRole("radio", { name: /NGN.*Nigerian naira/i }),
-    );
+    await user.tab();
     expect(amount).toHaveValue("250,000.00");
     expect(amount.previousElementSibling).toHaveTextContent("₦");
   });

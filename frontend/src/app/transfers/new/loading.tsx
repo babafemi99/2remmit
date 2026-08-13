@@ -1,22 +1,10 @@
-import { BrandedAnimation } from "@/components/transfers/branded-animation";
-import { ConsoleShell } from "@/components/transfers/console-shell";
-import transferArrows from "@/animations/transfer-arrows.json";
+import { PageLoader } from "@/components/loading/page-loader";
 
 export default function NewTransferLoading() {
   return (
-    <ConsoleShell>
-      <section
-        className="console-content create-route-loading"
-        aria-busy="true"
-      >
-        <BrandedAnimation
-          animationData={transferArrows}
-          className="loader-animation"
-          label="Loading create transfer"
-        />
-        <strong>Loading create transfer</strong>
-        <p>Preparing a secure payout attempt…</p>
-      </section>
-    </ConsoleShell>
+    <PageLoader
+      label="Loading create transfer…"
+      description="Preparing a secure payout attempt."
+    />
   );
 }

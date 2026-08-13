@@ -28,7 +28,7 @@ type Step = "details" | "review" | "success";
 
 const INITIAL_VALUES: TransferFormValues = {
   amount: "",
-  currency: "",
+  currency: "NGN",
   recipientRef: "",
 };
 

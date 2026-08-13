@@ -2,6 +2,7 @@ import { CaretRight } from "@phosphor-icons/react";
 import Link from "next/link";
 
 import { StatusBadge } from "@/components/transfers/status-badge";
+import { CURRENCY_SYMBOLS } from "@/lib/money";
 import type { Transfer } from "@/types/transfer";
 
 const amountFormatter = new Intl.NumberFormat("en-GB", {
@@ -35,7 +36,9 @@ export function TransferRow({ transfer }: TransferRowProps) {
       </div>
       <div className="transfer-value">
         <strong className="numeric amount">
-          {transfer.currency} {amountFormatter.format(transfer.amount)}
+          <span aria-hidden="true">{CURRENCY_SYMBOLS[transfer.currency]}</span>
+          <span className="sr-only">{transfer.currency} </span>
+          {amountFormatter.format(transfer.amount)}
         </strong>
         <CaretRight
           className="row-chevron"

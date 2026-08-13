@@ -6,8 +6,6 @@ This is the authoritative technical explanation for the 2Remit take-home. It des
 
 > Tests are mandatory for this project and form part of its acceptance criteria.
 
-The supplied assessment instructions prioritize correctness, explicit state transitions, idempotency, webhook security, deliberate edge-case behavior, and clear engineering judgment. The original assessment PDF was not present in the workspace during this documentation pass, so assessment wording below is mapped from the requirements supplied with the project rather than quoted from the PDF.
-
 ## Evaluation map
 
 | Priority | Implementation | Evidence |
@@ -74,7 +72,7 @@ The create layer canonicalizes amount to two decimal places, uppercases currency
 - The frontend generates one UUID per attempt, blocks double clicks, reuses it after uncertain network failure, and rotates it only after an attempted body changes.
 - Logs record only `idempotency_key_present`; the key itself is never logged.
 
-Evidence includes `test_same_key_and_payload_replays_original_result`, `test_same_key_with_changed_business_data_returns_conflict`, `test_existing_processing_record_returns_conflict_without_creating_transfer`, `prevents a double click from creating two requests`, `reuses the same key after an uncertain network failure`, and `rotates the key after an attempted body is edited`.
+Evidence includes the real-HTTP tests `test_same_key_and_body_replays_one_durable_transfer`, `test_same_key_with_changed_body_returns_conflict`, and `test_concurrent_same_key_requests_create_one_transfer`. The concurrency test releases two client threads together against Django's live server and asserts one transfer, one idempotency record, one created activity and the same successful response identity. Lower-level and frontend evidence additionally covers in-progress records, double-click blocking, uncertain-network retry and key rotation after editing.
 
 ## Webhook verification
 
@@ -98,6 +96,8 @@ A safe local demonstration is `/dev`; it signs deterministic compact JSON server
 - Wrong secret: `test_signature_generated_with_wrong_secret_returns_unauthorized`
 - Valid: `test_valid_signature_processes_supported_event`
 - Missing configured secret: `test_unconfigured_secret_fails_closed`
+
+`ProviderWebhookLiveHttpTests` also sends real signed HTTP requests through the live Django server and asserts the resulting transfer, `WebhookEvent`, and provider-sourced `TransferActivity`, plus rejection-before-write, exact-duplicate and conflicting-event-ID behavior.
 
 ## Provider edge cases A–E
 
@@ -151,17 +151,55 @@ Latest verified local results:
 
 | Check | Command | Result |
 | --- | --- | --- |
-| Backend suite | `cd backend && ../.venv/bin/python manage.py test --noinput` | 130 passed |
+| Backend suite | `docker compose --env-file .env run --rm backend-tests python manage.py test --noinput` | 138 passed |
 | Django checks | `cd backend && ../.venv/bin/python manage.py check` | No issues |
 | Migration drift | `cd backend && ../.venv/bin/python manage.py makemigrations --check --dry-run` | No changes |
-| Frontend tests | `cd frontend && npm test -- --run` | 55 passed |
+| Frontend tests | `cd frontend && npm test -- --run` | 57 passed |
 | Formatting | `cd frontend && npm run format:check` | Passed |
 | ESLint | `cd frontend && npm run lint` | Passed |
 | Strict TypeScript | `cd frontend && npm run type-check` | Passed |
 | Production build | `cd frontend && npm run build` | Passed, Next.js 16.3.0 |
 | Compose validation | `docker compose config --quiet` | Passed during infrastructure validation |
 
-Named payment/concurrency/race tests are more meaningful here than coverage padding. PostgreSQL-backed `TransactionTestCase` tests exercise concurrent webhook delivery, terminal webhook races, stream cleanup and real live-server simulator delivery.
+Named payment/concurrency/race tests are more meaningful here than coverage padding. PostgreSQL-backed tests exercise concurrent idempotent HTTP creation, concurrent webhook delivery, terminal webhook races, stream cleanup and real live-server simulator delivery.
+
+### How to run the tests
+
+Run commands from the repository root. Docker is the most reproducible backend path because it supplies PostgreSQL and the project environment. If backend source or tests changed since the image was built, rebuild first:
+
+```bash
+docker compose --env-file .env build backend-tests
+```
+
+| Scope | Command |
+| --- | --- |
+| Complete project validation | `make test` |
+| Complete backend suite in Docker | `docker compose --env-file .env run --rm backend-tests python manage.py test --noinput` |
+| All live-HTTP backend E2E tests | `docker compose --env-file .env run --rm backend-tests python manage.py test transfers.tests.test_http_e2e --noinput` |
+| Live-HTTP create/idempotency E2E | `docker compose --env-file .env run --rm backend-tests python manage.py test transfers.tests.test_http_e2e.TransferCreationIdempotencyLiveHttpTests --noinput` |
+| Live-HTTP signed-webhook E2E | `docker compose --env-file .env run --rm backend-tests python manage.py test transfers.tests.test_http_e2e.ProviderWebhookLiveHttpTests --noinput` |
+| All idempotency unit/API tests | `docker compose --env-file .env run --rm backend-tests python manage.py test transfers.tests.test_idempotency --noinput` |
+| Webhook security and processing | `docker compose --env-file .env run --rm backend-tests python manage.py test transfers.tests.test_webhook_security transfers.tests.test_webhook_api transfers.tests.test_webhook_processing --noinput` |
+| Provider simulator, including real HTTP delivery | `docker compose --env-file .env run --rm backend-tests python manage.py test transfers.tests.test_provider_simulator transfers.tests.test_provider_simulator_live --noinput` |
+| Activity history and SSE | `docker compose --env-file .env run --rm backend-tests python manage.py test transfers.tests.test_activities transfers.tests.test_activity_notifications transfers.tests.test_activity_stream --noinput` |
+| Domain state machine | `docker compose --env-file .env run --rm backend-tests python manage.py test transfers.tests.test_services --noinput` |
+| Django system check | `docker compose --env-file .env run --rm backend-tests python manage.py check` |
+| Migration drift check | `docker compose --env-file .env run --rm backend-tests python manage.py makemigrations --check --dry-run` |
+| Complete frontend test suite | `cd frontend && npm test` |
+| Frontend formatting, lint and types | `cd frontend && npm run format:check && npm run lint && npm run type-check` |
+| Frontend production build | `cd frontend && npm run build` |
+| Compose configuration | `docker compose --env-file .env config --quiet` |
+
+Individual Django tests can be selected by appending the full class or method path, for example:
+
+```bash
+docker compose --env-file .env run --rm backend-tests \
+  python manage.py test \
+  transfers.tests.test_http_e2e.TransferCreationIdempotencyLiveHttpTests.test_concurrent_same_key_requests_create_one_transfer \
+  --noinput
+```
+
+`make test` builds and runs the existing Compose test services, so it requires only Docker and the repository environment file. `make test-backend` and `make test-frontend` provide focused clean-checkout entry points.
 
 ## Intentional bug note
 
@@ -216,7 +254,7 @@ Provider secrets remain server-side. The frontend never signs callbacks. Webhook
 - SIGTERM and 20-second grace periods support clean shutdown.
 - PostgreSQL data, VictoriaLogs data and Vector checkpoints use named volumes.
 - Runtime settings and ports are environment-driven through `.env.example` and Compose defaults.
-- Every Compose service loads the root `.env`; Make targets also pass it explicitly with `--env-file .env`.
+- Every Compose service loads the optional root `.env`; Make targets use `.env` when present and otherwise fall back to `.env.example`.
 
 ## Idempotent seed
 
@@ -273,7 +311,7 @@ Add authentication and tenant authorization first, then provider reconciliation 
 
 ## Commit and process note
 
-Git history is incremental: domain model, API, regression fixes, PostgreSQL test configuration, signature verification, webhook processing, logging, simulator, activity/SSE, frontend and infrastructure landed as separate commits. Tests were added alongside risky behavior, and `6f9451c` is a concrete test-driven boundary fix. Current pagination/navigation/documentation changes remain intentionally uncommitted.
+Git history is incremental: domain model, API, regression fixes, PostgreSQL test configuration, signature verification, webhook processing, logging, simulator, activity/SSE, frontend and infrastructure landed as separate commits. Tests were added alongside risky behavior, and `6f9451c` is a concrete test-driven boundary fix.
 
 ## Compliance checklist
 

@@ -7,6 +7,7 @@ import {
   X,
 } from "@phosphor-icons/react";
 
+import { InlineSpinner } from "@/components/loading/inline-spinner";
 import type { LiveState } from "@/hooks/use-transfer-activity-stream";
 import type { TransferActivity } from "@/types/transfer-detail";
 
@@ -104,6 +105,7 @@ export function ActivityTimeline({
               disabled={loadingMore}
               onClick={onLoadMore}
             >
+              {loadingMore ? <InlineSpinner /> : null}
               {loadingMore ? "Loading…" : "Load earlier activity"}
             </button>
           ) : null}

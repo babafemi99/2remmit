@@ -16,10 +16,17 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("next/image", () => ({
-  default: ({ alt, ...props }: React.ImgHTMLAttributes<HTMLImageElement>) => (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img alt={alt} {...props} />
-  ),
+  default: ({
+    alt,
+    priority: _priority,
+    ...props
+  }: React.ImgHTMLAttributes<HTMLImageElement> & { priority?: boolean }) => {
+    void _priority;
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img alt={alt} {...props} />
+    );
+  },
 }));
 
 vi.mock("lottie-react", () => ({

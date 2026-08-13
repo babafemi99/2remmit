@@ -3,8 +3,10 @@ SHELL := /bin/bash
 PYTHON := .venv/bin/python
 DJANGO_HOST := 127.0.0.1:8000
 PROVIDER_WEBHOOK_SECRET ?= 2remit-local-provider-secret
+COMPOSE_ENV_FILE := $(if $(wildcard .env),.env,.env.example)
+COMPOSE := docker compose --env-file $(COMPOSE_ENV_FILE)
 
-.PHONY: dev backend frontend compose-up compose-down compose-logs seed test
+.PHONY: dev backend frontend compose-up compose-down compose-logs seed test test-backend test-frontend
 
 dev:
 	@set -eu; \
@@ -35,17 +37,23 @@ frontend:
 	@cd frontend && npm run dev
 
 compose-up:
-	docker compose --env-file .env up --build -d
+	$(COMPOSE) up --build -d
 
 compose-down:
-	docker compose --env-file .env down
+	$(COMPOSE) down
 
 compose-logs:
-	docker compose --env-file .env logs --follow backend frontend vector victoria-logs
+	$(COMPOSE) logs --follow backend frontend vector victoria-logs
 
 seed:
-	docker compose --env-file .env run --rm setup python manage.py seed_demo
+	$(COMPOSE) run --rm setup python manage.py seed_demo
 
-test:
-	@cd backend && ../$(PYTHON) manage.py test
-	@cd frontend && npm run format:check && npm run lint && npm run type-check && npm test && npm run build
+test: test-backend test-frontend
+
+test-backend:
+	$(COMPOSE) build backend-tests
+	$(COMPOSE) run --rm backend-tests
+
+test-frontend:
+	$(COMPOSE) build frontend-tests
+	$(COMPOSE) run --rm frontend-tests

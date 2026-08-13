@@ -23,6 +23,15 @@ const PROCESSING = {
   updated_at: "2026-08-12T10:01:00Z",
 };
 const PENDING = { ...PROCESSING, id: "other", status: "pending" };
+const SECOND_PROCESSING = {
+  ...PROCESSING,
+  id: "019ff73e-b943-7675-8512-897c6180cc07",
+  reference: "TRF-SECOND0001",
+  amount: "250000.00",
+  currency: "NGN",
+  recipient_ref: "ACME-SUPPLIER-01",
+  provider_transfer_id: "PRV-456",
+};
 
 function json(body: unknown, status = 200) {
   return Promise.resolve(
@@ -67,14 +76,38 @@ describe("ProviderSimulatorScreen", () => {
   it("loads and displays only processing transfers", async () => {
     renderScreen();
     expect(screen.getByText("Loading transfers")).toBeVisible();
-    const selector = await screen.findByRole("combobox", {
-      name: "Processing transfer",
+    const processingOption = await screen.findByRole("radio", {
+      name: /TRF-ZZQ7K8ZOLQ/,
     });
-    expect(within(selector).getByText(/TRF-ZZQ7K8ZOLQ/)).toBeVisible();
+    expect(processingOption).toBeChecked();
+    expect(processingOption.closest("label")).toHaveTextContent("£1,250.00");
     expect(screen.queryByText(/other/)).not.toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "Open transfer detail" }),
     ).toHaveAttribute("href", `/transfers/${PROCESSING.id}`);
+  });
+
+  it("selects a visible transfer card and updates its actions", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockImplementation(() =>
+          json([PROCESSING, SECOND_PROCESSING, PENDING]),
+        ),
+    );
+    renderScreen();
+    const user = userEvent.setup();
+    const second = await screen.findByRole("radio", {
+      name: /TRF-SECOND0001/,
+    });
+    expect(second.closest("label")).toHaveTextContent("₦250,000.00");
+    await user.click(second);
+    expect(second).toBeChecked();
+    expect(
+      screen.getByRole("link", { name: "Open transfer detail" }),
+    ).toHaveAttribute("href", `/transfers/${SECOND_PROCESSING.id}`);
+    expect(screen.getByText("PRV-456")).toBeVisible();
   });
 
   it("renders an empty state when no transfer is processing", async () => {
@@ -94,7 +127,7 @@ describe("ProviderSimulatorScreen", () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "Try again" }));
     expect(
-      await screen.findByText("TRF-ZZQ7K8ZOLQ · GBP 1250.00"),
+      await screen.findByRole("radio", { name: /TRF-ZZQ7K8ZOLQ/ }),
     ).toBeVisible();
   });
 

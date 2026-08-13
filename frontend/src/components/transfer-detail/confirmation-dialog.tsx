@@ -4,6 +4,8 @@ import { X } from "@phosphor-icons/react";
 import { useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 
+import { InlineSpinner } from "@/components/loading/inline-spinner";
+
 export function ConfirmationDialog({
   title,
   description,
@@ -110,12 +112,7 @@ export function ConfirmationDialog({
             aria-busy={busy}
             onClick={onConfirm}
           >
-            {busy ? (
-              <span className="transfer-button-loader" aria-hidden="true">
-                <i />
-                <i />
-              </span>
-            ) : null}
+            {busy ? <InlineSpinner /> : null}
             {busy ? (busyLabel ?? "Working…") : confirmLabel}
           </button>
         </div>
