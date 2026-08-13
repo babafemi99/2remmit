@@ -3,9 +3,8 @@ data_dir: /vector-data-dir
 sources:
   docker:
     type: docker_logs
-    include_containers:
-      - 2remit-backend
-      - 2remit-frontend
+    include_labels:
+      - io.2remit.logs=true
 
 transforms:
   normalize:

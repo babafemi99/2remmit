@@ -79,6 +79,8 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     environment: *backend-environment
+    labels:
+      io.2remit.logs: "true"
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     depends_on:
@@ -100,6 +102,8 @@ services:
     environment:
       DJANGO_API_BASE_URL: http://backend:8000
       VICTORIA_LOGS_PUBLIC_URL: ${VICTORIA_LOGS_PUBLIC_URL:-http://localhost:9428/select/vmui/}
+    labels:
+      io.2remit.logs: "true"
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
     depends_on:
