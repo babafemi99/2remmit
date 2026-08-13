@@ -2,6 +2,7 @@
 
 :root {
   color-scheme: light;
+  --font-manrope: "Manrope Variable";
   --font-sans: var(--font-manrope), Manrope, "Avenir Next", Arial, sans-serif;
   --color-blue: #2563eb;
   --color-blue-hover: #1d4ed8;

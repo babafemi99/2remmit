@@ -151,7 +151,7 @@ Latest verified local results:
 
 | Check | Command | Result |
 | --- | --- | --- |
-| Backend suite | `docker compose --env-file .env run --rm backend-tests python manage.py test --noinput` | 138 passed |
+| Backend suite | `docker compose --env-file .env run --rm backend-tests python manage.py test --noinput` | 140 passed |
 | Django checks | `cd backend && ../.venv/bin/python manage.py check` | No issues |
 | Migration drift | `cd backend && ../.venv/bin/python manage.py makemigrations --check --dry-run` | No changes |
 | Frontend tests | `cd frontend && npm test -- --run` | 57 passed |

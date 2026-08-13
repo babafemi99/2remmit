@@ -124,6 +124,43 @@ class TransferCreationIdempotencyLiveHttpTests(LiveHttpMixin, LiveServerTestCase
         self.assertEqual(TransferActivity.objects.count(), 1)
 
 
+class TransferLifecycleLiveHttpTests(LiveHttpMixin, LiveServerTestCase):
+    def test_cancel_after_submit_returns_conflict_and_preserves_processing(self):
+        create_status, created = self.post_json(
+            "/api/transfers/",
+            {
+                "amount": "750.00",
+                "currency": "GBP",
+                "recipient_ref": "LIVE-LIFECYCLE-TEST",
+            },
+            headers={"Idempotency-Key": "live-lifecycle-key"},
+        )
+        transfer_path = f"/api/transfers/{created['id']}"
+
+        submit_status, submitted = self.post_json(
+            f"{transfer_path}/submit/",
+            {},
+        )
+        cancel_status, cancel_body = self.post_json(
+            f"{transfer_path}/cancel/",
+            {},
+        )
+
+        transfer = Transfer.objects.get(pk=created["id"])
+        self.assertEqual(create_status, 201)
+        self.assertEqual(submit_status, 200)
+        self.assertEqual(submitted["status"], Transfer.Status.PROCESSING)
+        self.assertEqual(cancel_status, 409)
+        self.assertIn("Cannot cancel", cancel_body["detail"])
+        self.assertEqual(transfer.status, Transfer.Status.PROCESSING)
+        self.assertEqual(
+            list(
+                transfer.activities.order_by("id").values_list("type", flat=True)
+            ),
+            [TransferActivity.Type.CREATED, TransferActivity.Type.SUBMITTED],
+        )
+
+
 @override_settings(PROVIDER_WEBHOOK_SECRET="live-webhook-secret")
 class ProviderWebhookLiveHttpTests(LiveHttpMixin, LiveServerTestCase):
     webhook_path = "/api/webhooks/provider/"
@@ -235,3 +272,41 @@ class ProviderWebhookLiveHttpTests(LiveHttpMixin, LiveServerTestCase):
         self.assertEqual(transfer.status, Transfer.Status.COMPLETED)
         self.assertEqual(WebhookEvent.objects.count(), 1)
         self.assertEqual(TransferActivity.objects.count(), 1)
+
+    def test_completed_then_failed_preserves_first_terminal_outcome(self):
+        transfer = self.create_processing_transfer()
+        completed = self.event_payload()
+        failed = self.event_payload(
+            event_id="evt_live_http_failed",
+            event="transfer.failed",
+            occurred_at="2026-08-12T12:01:00Z",
+            data={
+                "provider_transfer_id": "PRV-LIVE-HTTP",
+                "reason": "Provider rejected transfer",
+            },
+        )
+
+        completed_status, _ = self.deliver(completed, self.sign(completed))
+        failed_status, failed_body = self.deliver(failed, self.sign(failed))
+
+        transfer.refresh_from_db()
+        rejected_event = WebhookEvent.objects.get(
+            event_id="evt_live_http_failed"
+        )
+        self.assertEqual(completed_status, 200)
+        self.assertEqual(failed_status, 200)
+        self.assertEqual(
+            failed_body["detail"],
+            "Webhook received but no transition was applied",
+        )
+        self.assertEqual(transfer.status, Transfer.Status.COMPLETED)
+        self.assertEqual(WebhookEvent.objects.count(), 2)
+        self.assertEqual(
+            rejected_event.processing_outcome,
+            WebhookEvent.ProcessingOutcome.INVALID_TRANSITION,
+        )
+        self.assertEqual(TransferActivity.objects.count(), 1)
+        self.assertEqual(
+            TransferActivity.objects.get().type,
+            TransferActivity.Type.COMPLETED,
+        )

@@ -133,12 +133,3 @@ An early submit/cancel API path allowed `Transfer.DoesNotExist` to escape as a `
 
 Git history is incremental across the domain model, API, regression fixes, webhook security, logging, simulator, activity/SSE, frontend and infrastructure. Risky behavior was accompanied by focused tests. The [full bug evidence and process history](docs/ENGINEERING.md#intentional-bug-note) names the exact tests and commit.
 
-## Submission checklist
-
-- [x] Backend and frontend included in the repository
-- [x] Runnable PostgreSQL-backed backend and frontend tests
-- [x] Root product README
-- [x] [Engineering deep dive](docs/ENGINEERING.md)
-- [x] Idempotent demo seed and local `/dev` provider simulator
-- [ ] Confirm private-repository reviewer access before sending
-- [ ] Optional Loom walkthrough
