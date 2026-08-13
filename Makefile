@@ -6,7 +6,7 @@ PROVIDER_WEBHOOK_SECRET ?= 2remit-local-provider-secret
 COMPOSE_ENV_FILE := $(if $(wildcard .env),.env,.env.example)
 COMPOSE := docker compose --env-file $(COMPOSE_ENV_FILE)
 
-.PHONY: dev backend frontend compose-up compose-down compose-logs seed test test-backend test-frontend
+.PHONY: dev backend frontend compose-up compose-down compose-reset compose-logs seed test test-backend test-frontend
 
 dev:
 	@set -eu; \
@@ -41,6 +41,11 @@ compose-up:
 
 compose-down:
 	$(COMPOSE) down
+
+# Removes this Compose project's persisted database and log data. Use only when
+# intentionally starting over, including after changing PostgreSQL credentials.
+compose-reset:
+	$(COMPOSE) down --volumes --remove-orphans
 
 compose-logs:
 	$(COMPOSE) logs --follow backend frontend vector victoria-logs

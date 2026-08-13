@@ -53,6 +53,15 @@ Review the local-only values in `.env` before starting. `make compose-up` passes
 
 Make targets fall back to the safe local defaults in `.env.example` when `.env` is absent, so lifecycle commands such as `make compose-down` remain usable before setup.
 
+If Docker already has 2Remit volumes initialized with different PostgreSQL credentials, reset only this project's local data and start again:
+
+```bash
+make compose-reset
+make compose-up
+```
+
+`compose-reset` deletes the local 2Remit PostgreSQL and log volumes. Normal `compose-down` preserves them.
+
 | Service | URL |
 | --- | --- |
 | 2Remit frontend | http://localhost:3000/transfers |
@@ -132,4 +141,3 @@ I would add tenant authentication and object authorization first, followed by pr
 An early submit/cancel API path allowed `Transfer.DoesNotExist` to escape as a `500`. That could make clients retry a permanently missing resource. Commit [`6f9451c`](https://github.com/babafemi99/2remmit/commit/6f9451ce5edc33439bc6fb949417cf5b95c81350) added the missing-action regression tests and mapped the domain exception to `404 Not Found`. The lesson was to keep domain services transport-agnostic while explicitly translating every expected domain failure at the API boundary.
 
 Git history is incremental across the domain model, API, regression fixes, webhook security, logging, simulator, activity/SSE, frontend and infrastructure. Risky behavior was accompanied by focused tests. The [full bug evidence and process history](docs/ENGINEERING.md#intentional-bug-note) names the exact tests and commit.
-
