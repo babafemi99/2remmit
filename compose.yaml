@@ -1,32 +1,26 @@
-name: 2remit
-
 x-backend-environment: &backend-environment
   DJANGO_DEBUG: "true"
-  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-local-compose-only-not-for-production}
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY in .env}
   DJANGO_ALLOWED_HOSTS: backend,localhost,127.0.0.1
   POSTGRES_DB: ${POSTGRES_DB:-2remit}
   POSTGRES_USER: ${POSTGRES_USER:-2remit}
-  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-2remit-local-password}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
   POSTGRES_HOST: postgres
   POSTGRES_PORT: "5432"
   DB_CONN_MAX_AGE: "60"
   LOG_DESTINATION: console
   ENABLE_PROVIDER_SIMULATOR: "true"
-  PROVIDER_WEBHOOK_SECRET: ${PROVIDER_WEBHOOK_SECRET:-2remit-local-provider-secret}
+  PROVIDER_WEBHOOK_SECRET: ${PROVIDER_WEBHOOK_SECRET:?Set PROVIDER_WEBHOOK_SECRET in .env}
   PROVIDER_SIMULATOR_WEBHOOK_URL: http://backend:8000/api/webhooks/provider/
   PROVIDER_SIMULATOR_ALLOWED_HOSTS: backend
 
 services:
   postgres:
     image: postgres:17-alpine
-    container_name: 2remit-postgres
-    env_file:
-      - path: .env
-        required: false
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-2remit}
       POSTGRES_USER: ${POSTGRES_USER:-2remit}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-2remit-local-password}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -41,9 +35,6 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    env_file:
-      - path: .env
-        required: false
     environment:
       <<: *backend-environment
       DB_CONN_MAX_AGE: "0"
@@ -62,9 +53,6 @@ services:
       context: .
       dockerfile: frontend/Dockerfile
       target: builder
-    env_file:
-      - path: .env
-        required: false
     command:
       - sh
       - -c
@@ -75,9 +63,6 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    env_file:
-      - path: .env
-        required: false
     environment: *backend-environment
     command: ["sh", "-c", "python manage.py migrate --noinput && python manage.py seed_demo"]
     depends_on:
@@ -93,10 +78,6 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    container_name: 2remit-backend
-    env_file:
-      - path: .env
-        required: false
     environment: *backend-environment
     ports:
       - "${BACKEND_PORT:-8000}:8000"
@@ -116,10 +97,6 @@ services:
     build:
       context: .
       dockerfile: frontend/Dockerfile
-    container_name: 2remit-frontend
-    env_file:
-      - path: .env
-        required: false
     environment:
       DJANGO_API_BASE_URL: http://backend:8000
       VICTORIA_LOGS_PUBLIC_URL: ${VICTORIA_LOGS_PUBLIC_URL:-http://localhost:9428/select/vmui/}
@@ -139,10 +116,6 @@ services:
 
   victoria-logs:
     image: victoriametrics/victoria-logs:v1.52.0
-    container_name: 2remit-victoria-logs
-    env_file:
-      - path: .env
-        required: false
     command:
       - -storageDataPath=/victoria-logs-data
       - -retentionPeriod=7d
@@ -160,10 +133,6 @@ services:
 
   vector:
     image: timberio/vector:0.48.0-alpine
-    container_name: 2remit-vector
-    env_file:
-      - path: .env
-        required: false
     command: ["--config", "/etc/vector/vector.yaml"]
     volumes:
       - ./infra/vector/vector.yaml:/etc/vector/vector.yaml:ro
